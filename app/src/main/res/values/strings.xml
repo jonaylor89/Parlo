@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Parlo</string>
+    <string name="notification_channel_session">Walk session</string>
+    <string name="notification_channel_session_desc">Shows the active language tutoring session</string>
+    <string name="action_mute">Mute</string>
+    <string name="action_unmute">Unmute</string>
+    <string name="action_end">End</string>
+</resources>
