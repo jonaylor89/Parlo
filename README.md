@@ -4,6 +4,14 @@ A hands-free, real-time voice language tutor for Android. Put your phone in your
 
 Native Kotlin + Jetpack Compose (Material 3), Gemini Live API over WebSockets. Single user, no accounts, no backend.
 
+## Screenshots
+
+| Main screen | Settings (API key, voice, model) | Vocabulary | Session history |
+| --- | --- | --- | --- |
+| ![Main screen](docs/screenshots/main.png) | ![Settings sheet](docs/screenshots/settings.png) | ![Vocab list](docs/screenshots/vocab.png) | ![Session history](docs/screenshots/history.png) |
+
+*Captured on an API 35 emulator with no API key configured; tapping **Start Walk Session** without a key opens Settings instead of connecting.*
+
 ## Features
 
 - **Live voice conversation** with the Gemini Live API (bidirectional audio streaming over WebSocket)
@@ -38,6 +46,29 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 Or open the project in Android Studio (Ladybug or newer) and press Run.
 
 Lint: `./gradlew :app:lintDebug`
+
+## Tests
+
+None of the tests need a Gemini API key or network access.
+
+```bash
+# JVM unit + integration tests (~10 s)
+./gradlew :app:testDebugUnitTest
+
+# Instrumented tests: needs a connected device or running emulator
+./gradlew :app:connectedDebugAndroidTest
+```
+
+| Suite | Where | What it covers |
+| --- | --- | --- |
+| `GeminiLiveClientIntegrationTest` | `app/src/test` | Drives the real `GeminiLiveClient` over OkHttp against an in-process fake of the Live WebSocket endpoint (`MockWebServer`): setup handshake and `?key=` auth, `setupComplete` gating, PCM `realtimeInput`, `clientContent`, `toolResponse`, decoding of audio / transcripts / tool calls / cancellations / `interrupted` / `turnComplete`, resumption-handle tracking, `goAway` reconnect that resumes with the handle, fallback to a fresh session when the server rejects the handle, fatal `403` → `InvalidApiKey` with no retry, and exponential backoff after a transient drop. |
+| `LiveModelDiscoveryTest` | `app/src/test` | `/models` pagination, `bidiGenerateContent` filtering, ranking (newest native-audio Live model first), API-key error surfacing. |
+| `MessagesTest` | `app/src/test` | Exact JSON shape of every client message and tolerant parsing of server messages (unknown fields ignored). |
+| `PromptBuilderTest`, `ToolHandlerTest`, `GeminiApiTest` | `app/src/test` | System prompt contents per language/dialect/level/scenario/correction style; `save_vocab` / `switch_language` execution and responses; error classification. |
+| `ParloDatabaseTest` | `app/src/androidTest` | Room DAOs on-device: session/turn ordering and cascade delete, recap persistence, empty-session cleanup, vocab grouping. |
+| `MainScreenSmokeTest` | `app/src/androidTest` | Launches `MainActivity`, checks the pickers render, that Start without a key opens Settings, and that Vocab / History are reachable. |
+
+What is *not* covered automatically: a real Gemini Live session (audio quality, model behaviour, actual resumption handles). That needs a key and a phone with earbuds; see [First run](#first-run).
 
 ## First run
 
