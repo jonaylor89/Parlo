@@ -1,5 +1,7 @@
 package com.parlo.app.gemini
 
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -29,9 +31,10 @@ data class VoiceConfig(val prebuiltVoiceConfig: PrebuiltVoiceConfig)
 @Serializable
 data class SpeechConfig(val voiceConfig: VoiceConfig)
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class GenerationConfig(
-    val responseModalities: List<String> = listOf("AUDIO"),
+    @EncodeDefault val responseModalities: List<String> = listOf("AUDIO"),
     val speechConfig: SpeechConfig? = null,
     val temperature: Double? = null,
 )
@@ -52,25 +55,27 @@ data class SessionResumptionConfig(val handle: String? = null)
 @Serializable
 data class SlidingWindow(val targetTokens: Long? = null)
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class ContextWindowCompressionConfig(
-    val slidingWindow: SlidingWindow = SlidingWindow(),
+    @EncodeDefault val slidingWindow: SlidingWindow = SlidingWindow(),
     val triggerTokens: Long? = null,
 )
 
 @Serializable
 class AudioTranscriptionConfig
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class Setup(
     val model: String,
     val generationConfig: GenerationConfig,
     val systemInstruction: Content,
     val tools: List<Tool> = emptyList(),
-    val sessionResumption: SessionResumptionConfig = SessionResumptionConfig(),
-    val contextWindowCompression: ContextWindowCompressionConfig = ContextWindowCompressionConfig(),
-    val inputAudioTranscription: AudioTranscriptionConfig = AudioTranscriptionConfig(),
-    val outputAudioTranscription: AudioTranscriptionConfig = AudioTranscriptionConfig(),
+    @EncodeDefault val sessionResumption: SessionResumptionConfig = SessionResumptionConfig(),
+    @EncodeDefault val contextWindowCompression: ContextWindowCompressionConfig = ContextWindowCompressionConfig(),
+    @EncodeDefault val inputAudioTranscription: AudioTranscriptionConfig = AudioTranscriptionConfig(),
+    @EncodeDefault val outputAudioTranscription: AudioTranscriptionConfig = AudioTranscriptionConfig(),
 )
 
 @Serializable
@@ -80,8 +85,9 @@ data class RealtimeInput(
     val audioStreamEnd: Boolean? = null,
 )
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
-data class ClientContent(val turns: List<Content>, val turnComplete: Boolean = true)
+data class ClientContent(val turns: List<Content>, @EncodeDefault val turnComplete: Boolean = true)
 
 @Serializable
 data class FunctionResponse(val id: String? = null, val name: String, val response: JsonObject)

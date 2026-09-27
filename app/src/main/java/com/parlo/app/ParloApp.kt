@@ -4,6 +4,7 @@ import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import com.parlo.app.data.LiveModelDiscovery
 import com.parlo.app.data.ModelRepository
 import com.parlo.app.data.SessionRepository
 import com.parlo.app.data.SettingsRepository
@@ -23,7 +24,7 @@ class AppContainer(context: Context) {
     val settings = SettingsRepository(context)
     val sessions = SessionRepository(db.sessionDao())
     val vocab = VocabRepository(db.vocabDao())
-    val models = ModelRepository(settings, okHttp)
+    val models = ModelRepository(settings, LiveModelDiscovery(okHttp))
 }
 
 class ParloApp : Application() {

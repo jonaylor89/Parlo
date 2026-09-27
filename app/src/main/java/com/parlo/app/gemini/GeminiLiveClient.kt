@@ -1,6 +1,5 @@
 package com.parlo.app.gemini
 
-import android.util.Base64
 import android.util.Log
 import com.parlo.app.model.SessionError
 import kotlinx.coroutines.CoroutineScope
@@ -20,6 +19,7 @@ import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import okio.ByteString
+import java.util.Base64
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.min
@@ -49,6 +49,7 @@ sealed interface LiveEvent {
 class GeminiLiveClient(
     private val okHttp: OkHttpClient,
     private val scope: CoroutineScope,
+    private val wsUrl: String = GeminiApi.LIVE_WS_URL,
 ) {
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = false; explicitNulls = false }
 
@@ -99,7 +100,7 @@ class GeminiLiveClient(
 
     fun sendAudio(pcm: ByteArray, len: Int = pcm.size) {
         if (!ready.get()) return
-        val b64 = Base64.encodeToString(pcm, 0, len, Base64.NO_WRAP)
+        val b64 = Base64.getEncoder().encodeToString(if (len == pcm.size) pcm else pcm.copyOf(len))
         send(ClientMessage(realtimeInput = RealtimeInput(audio = Blob(GeminiApi.INPUT_MIME, b64))))
     }
 
@@ -136,7 +137,7 @@ class GeminiLiveClient(
 
     private fun openSocket() {
         if (closedByUser.get()) return
-        val url = "${GeminiApi.LIVE_WS_URL}?key=$apiKey"
+        val url = "$wsUrl?key=$apiKey"
         val req = Request.Builder().url(url).build()
         awaitingSetup = true
         connectingWithHandle = resumeHandle
@@ -193,7 +194,7 @@ class GeminiLiveClient(
             sc.modelTurn?.parts?.forEach { part ->
                 part.inlineData?.let { blob ->
                     if (blob.mimeType.startsWith("audio/pcm")) {
-                        runCatching { Base64.decode(blob.data, Base64.DEFAULT) }
+                        runCatching { Base64.getMimeDecoder().decode(blob.data) }
                             .onSuccess { _events.tryEmit(LiveEvent.Audio(it)) }
                     }
                 }
