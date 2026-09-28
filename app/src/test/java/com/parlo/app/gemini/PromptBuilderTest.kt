@@ -34,6 +34,42 @@ class PromptBuilderTest {
     }
 
     @Test
+    fun `super beginner opens in English, translates everything, and recaps in English`() {
+        val c = SessionConfig(language = "Korean", dialect = "Seoul Korean", level = Level.SUPER_BEGINNER)
+        val p = PromptBuilder.systemInstruction(c)
+        assertTrue(p.contains("Super Beginner level"))
+        assertTrue(p.contains("Your current level is Super Beginner."))
+        assertTrue(p.contains("Begin in English"))
+        assertTrue(p.contains("teach one short Korean greeting"))
+        assertFalse(p.contains("Begin by greeting the user briefly in Korean"))
+
+        val recap = PromptBuilder.recapMessage(c)
+        assertTrue(recap.contains("in English, repeating each Korean phrase slowly"))
+
+        val switch = PromptBuilder.switchMessage(SessionConfig(), SessionConfig().copy(level = Level.SUPER_BEGINNER))
+        assertTrue(switch.contains("at Super Beginner level"))
+        assertTrue(switch.contains(Level.SUPER_BEGINNER.guidance))
+        assertTrue(switch.contains("acknowledge the switch in English"))
+
+        // other levels are unaffected
+        val normal = PromptBuilder.systemInstruction(c.copy(level = Level.INTERMEDIATE))
+        assertTrue(normal.contains("Begin by greeting the user briefly in Korean"))
+        assertFalse(normal.contains("Begin in English"))
+    }
+
+    @Test
+    fun `level parse is forgiving`() {
+        assertEquals(Level.SUPER_BEGINNER, Level.parse("SUPER_BEGINNER"))
+        assertEquals(Level.SUPER_BEGINNER, Level.parse("Super Beginner"))
+        assertEquals(Level.SUPER_BEGINNER, Level.parse("super-beginner"))
+        assertEquals(Level.SUPER_BEGINNER, Level.parse("absolute beginner"))
+        assertEquals(Level.BEGINNER, Level.parse("beginner"))
+        assertEquals(Level.ADVANCED, Level.parse("Advanced"))
+        assertEquals(Level.INTERMEDIATE, Level.parse(null))
+        assertEquals(Level.INTERMEDIATE, Level.parse("fluent-ish"))
+    }
+
+    @Test
     fun `blank dialect falls back to standard language`() {
         val p = PromptBuilder.systemInstruction(SessionConfig(language = "Dutch", dialect = ""))
         assertTrue(p.contains("standard Dutch"))

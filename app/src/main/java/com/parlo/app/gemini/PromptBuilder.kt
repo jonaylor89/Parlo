@@ -1,6 +1,7 @@
 package com.parlo.app.gemini
 
 import com.parlo.app.model.CorrectionStyle
+import com.parlo.app.model.Level
 import com.parlo.app.model.SessionConfig
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -19,7 +20,9 @@ You are a friendly, patient conversation partner helping the user practice ${c.l
 Conversation style:
 - Keep each reply short: usually one to three sentences. This is a conversation, not a lecture.
 - End most turns with a simple question or prompt so the user always knows it's their turn.
-- Speak naturally at a pace suited to $level. Beginner: slow, clear, simple vocabulary, and occasional brief English support. Intermediate: natural pace, English only when the user is stuck. Advanced: native pace, idioms and regional expressions, no English unless asked.
+- Speak at a pace suited to $level.
+${Level.entries.joinToString("\n") { "  - " + it.guidance }}
+${levelReminder(c.level)}
 - Use vocabulary, expressions, and pronunciation typical of $dialect.
 - Current scenario: ${c.scenario.label} — ${c.scenario.prompt}. Stay in that scenario unless the user changes topic.
 - If the user is silent for a long time, don't fill the silence repeatedly. They may be crossing a street or catching their breath. Wait, then offer at most one gentle prompt.
@@ -40,8 +43,19 @@ Commands the user may say at any time, in English or ${c.language}:
 
 Proactively call save_vocab for genuinely useful new words you introduce, but no more than a few per session.
 
-Begin by greeting the user briefly in ${c.language} and opening the scenario with one short question.
+${opening(c)}
         """.trimIndent()
+    }
+
+    private fun levelReminder(level: Level) = "Your current level is ${level.label}." + when (level) {
+        Level.SUPER_BEGINNER -> " Keep it tiny: English first, one short phrase at a time, translate everything, repeat a lot, celebrate small wins. When switching level mid-session, a request like 'easier' from a Super Beginner means even shorter phrases and more English, not a new level."
+        else -> ""
+    }
+
+    private fun opening(c: SessionConfig) = when (c.level) {
+        Level.SUPER_BEGINNER ->
+            "Begin in English: say hello, tell the user in one sentence that you'll go very slowly and translate everything, then teach one short ${c.language} greeting (say it slowly, give the English, say it slowly again) and invite the user to try saying it."
+        else -> "Begin by greeting the user briefly in ${c.language} and opening the scenario with one short question."
     }
 
     private fun correctionReminder(style: CorrectionStyle) = when (style) {
@@ -55,18 +69,20 @@ Begin by greeting the user briefly in ${c.language} and opening the scenario wit
         val changes = mutableListOf<String>()
         if (old.language != new.language || old.dialect != new.dialect || old.level != new.level) {
             changes += "speak ${new.dialect.ifBlank { new.language }} (${new.language}) at ${new.level.label} level"
+            if (old.level != new.level) changes += new.level.guidance
         }
         if (old.scenario != new.scenario) changes += "switch the scenario to \"${new.scenario.label}\": ${new.scenario.prompt}"
         if (old.correctionStyle != new.correctionStyle) changes += "use the ${new.correctionStyle.label} correction style"
         val body = if (changes.isEmpty()) "continue as before" else changes.joinToString("; ")
-        return "[System] From now on, $body. Briefly acknowledge the switch in ${new.language} and continue the conversation. Do not call switch_language for this change."
+        val ackLanguage = if (new.level == Level.SUPER_BEGINNER) "English" else new.language
+        return "[System] From now on, $body. Briefly acknowledge the switch in $ackLanguage and continue the conversation. Do not call switch_language for this change."
     }
 
     fun repeatSlowlyMessage() =
         "[System] The user pressed the headset button: repeat your last sentence slowly and clearly, then wait."
 
     fun recapMessage(c: SessionConfig) =
-        "[System] The walk is ending. Give a spoken recap of about 30 seconds in a mix of ${c.language} and English suited to a ${c.level.label} learner: recurring mistakes you noticed, what went well, and three words or phrases to review. Do not ask a question at the end; finish with a short goodbye."
+        "[System] The walk is ending. Give a spoken recap of about 30 seconds in ${if (c.level == Level.SUPER_BEGINNER) "English, repeating each ${c.language} phrase slowly with its meaning," else "a mix of ${c.language} and English"} suited to a ${c.level.label} learner: recurring mistakes you noticed, what went well, and three words or phrases to review. Do not ask a question at the end; finish with a short goodbye."
 
     fun resumeContextMessage(recent: List<Pair<String, String>>, c: SessionConfig): String {
         val lines = recent.joinToString("\n") { (who, text) -> "$who: $text" }
@@ -98,7 +114,7 @@ Begin by greeting the user briefly in ${c.language} and opening the scenario wit
                         putJsonObject("properties") {
                             putJsonObject("language") { put("type", "STRING"); put("description", "New target language, e.g. Japanese") }
                             putJsonObject("dialect") { put("type", "STRING"); put("description", "New regional accent/dialect, e.g. Kansai Japanese. Reuse the previous one if unchanged.") }
-                            putJsonObject("level") { put("type", "STRING"); put("description", "Beginner, Intermediate, or Advanced") }
+                            putJsonObject("level") { put("type", "STRING"); put("description", "Super Beginner, Beginner, Intermediate, or Advanced") }
                         }
                         putJsonArray("required") { add(kotlinx.serialization.json.JsonPrimitive("language")) }
                     },

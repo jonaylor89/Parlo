@@ -80,6 +80,12 @@ class ToolHandlerTest {
         handler.handle(FunctionCall(name = "switch_language", args = buildJsonObject { put("language", "portuguese") }))
         assertEquals(LanguageCombo("Portuguese", "Brazilian Portuguese (São Paulo)", Level.INTERMEDIATE), switched.last())
 
+        // level spelled loosely by the model
+        handler.handle(FunctionCall(name = "switch_language", args = buildJsonObject { put("language", "Spanish"); put("level", "super-beginner") }))
+        assertEquals(Level.SUPER_BEGINNER, switched.last().level)
+        handler.handle(FunctionCall(name = "switch_language", args = buildJsonObject { put("language", "Spanish"); put("level", "absolute beginner") }))
+        assertEquals(Level.SUPER_BEGINNER, switched.last().level)
+
         // unknown language -> passes through as typed
         handler.handle(FunctionCall(name = "switch_language", args = buildJsonObject { put("language", "Klingon") }))
         assertEquals(LanguageCombo("Klingon", "Klingon", Level.INTERMEDIATE), switched.last())

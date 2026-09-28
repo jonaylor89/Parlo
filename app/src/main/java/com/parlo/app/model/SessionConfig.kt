@@ -2,14 +2,41 @@ package com.parlo.app.model
 
 import kotlinx.serialization.Serializable
 
-enum class Level(val label: String) {
-    BEGINNER("Beginner"),
-    INTERMEDIATE("Intermediate"),
-    ADVANCED("Advanced");
+enum class Level(val label: String, val description: String, val guidance: String) {
+    SUPER_BEGINNER(
+        "Super Beginner",
+        "Mostly English. One tiny phrase at a time, translated and repeated.",
+        "Super Beginner: the user understands almost nothing yet. Lead the conversation in English and teach one very short phrase (one to four words) at a time. " +
+            "Say the phrase slowly and clearly, then give the English meaning right away, then say the phrase slowly once more and ask the user to repeat it. " +
+            "Never say more than one short target-language sentence without an English translation immediately after it. " +
+            "Accept one-word answers, English answers, and rough pronunciation warmly; if the user is silent or confused, do not ask a new question — repeat even slower or make it simpler. " +
+            "Recycle the same handful of phrases many times before adding a new one.",
+    ),
+    BEGINNER(
+        "Beginner",
+        "Slow and simple, brief English help when stuck.",
+        "Beginner: slow, clear, simple vocabulary, short sentences, and occasional brief English support.",
+    ),
+    INTERMEDIATE(
+        "Intermediate",
+        "Natural pace, English only when needed.",
+        "Intermediate: natural pace, English only when the user is stuck.",
+    ),
+    ADVANCED(
+        "Advanced",
+        "Native pace, idioms and regional expressions.",
+        "Advanced: native pace, idioms and regional expressions, no English unless asked.",
+    );
 
     companion object {
-        fun parse(value: String?): Level =
-            entries.firstOrNull { it.name.equals(value, true) || it.label.equals(value, true) } ?: INTERMEDIATE
+        fun parse(value: String?): Level {
+            val v = value?.trim()?.replace('-', ' ')?.replace('_', ' ') ?: return INTERMEDIATE
+            return entries.firstOrNull { it.name.replace('_', ' ').equals(v, true) || it.label.equals(v, true) }
+                ?: when {
+                    v.contains("super", true) || v.contains("absolute", true) || v.contains("total", true) || v.contains("zero", true) -> SUPER_BEGINNER
+                    else -> INTERMEDIATE
+                }
+        }
     }
 }
 

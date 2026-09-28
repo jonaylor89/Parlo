@@ -172,7 +172,9 @@ fun MainScreen(
             AnimatedVisibility(visible = showPickers) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     LanguageCard(language = cfg.language, dialect = cfg.dialect, onClick = { showLanguagePicker = true })
-                    SegmentedPicker(options = Level.entries, selected = cfg.level, label = { it.label }, onSelect = { l -> viewModel.updateConfig { it.copy(level = l) } })
+                    Text("Level", style = MaterialTheme.typography.labelMedium)
+                    ChipFlow(options = Level.entries, selected = cfg.level, label = { it.label }, onSelect = { l -> viewModel.updateConfig { it.copy(level = l) } })
+                    Text(cfg.level.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text("Scenario", style = MaterialTheme.typography.labelMedium)
                     ChipRow(options = Scenario.entries, selected = cfg.scenario, label = { it.label }, onSelect = { s -> viewModel.updateConfig { it.copy(scenario = s) } })
                     Text("Corrections", style = MaterialTheme.typography.labelMedium)
