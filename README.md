@@ -129,7 +129,7 @@ app/src/main/java/com/parlo/app/
 
 ## Website
 
-`site/` is an Astro landing page (static output in `site/dist` via `npm run build`).
+`site/` is the Astro landing page at https://parlo.jonaylor.com (static output in `site/dist` via `npm run build`).
 
 ```bash
 cd site && npm install && npm run dev
