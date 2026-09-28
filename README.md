@@ -129,7 +129,7 @@ app/src/main/java/com/parlo/app/
 
 ## Website
 
-`site/` is an Astro landing page (https://jonaylor89.github.io/Parlo once GitHub Pages is enabled for the repo; the `Deploy site` workflow publishes it on every push to `main` that touches `site/`).
+`site/` is an Astro landing page (static output in `site/dist` via `npm run build`).
 
 ```bash
 cd site && npm install && npm run dev
