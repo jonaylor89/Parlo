@@ -99,5 +99,51 @@ data class LanguageCombo(
 
 object Defaults {
     val languages: List<String> get() = LanguageCatalog.languages.map { it.name }
-    val voices = listOf("Puck", "Aoede", "Charon", "Kore", "Fenrir", "Leda", "Orus", "Zephyr")
+    val voices: List<String> get() = VoiceCatalog.all.map { it.name }
+}
+
+enum class VoiceGender(val label: String) { FEMALE("Female"), MALE("Male") }
+
+/** A Gemini prebuilt voice. [character] is Google's one-word description of its tone. */
+data class Voice(val name: String, val gender: VoiceGender, val character: String)
+
+/** All 30 prebuilt Gemini voices (ai.google.dev/gemini-api/docs/speech-generation#voices). */
+object VoiceCatalog {
+    val all: List<Voice> = listOf(
+        Voice("Puck", VoiceGender.MALE, "Upbeat"),
+        Voice("Charon", VoiceGender.MALE, "Informative"),
+        Voice("Kore", VoiceGender.FEMALE, "Firm"),
+        Voice("Fenrir", VoiceGender.MALE, "Excitable"),
+        Voice("Aoede", VoiceGender.FEMALE, "Breezy"),
+        Voice("Leda", VoiceGender.FEMALE, "Youthful"),
+        Voice("Orus", VoiceGender.MALE, "Firm"),
+        Voice("Zephyr", VoiceGender.FEMALE, "Bright"),
+        Voice("Achernar", VoiceGender.FEMALE, "Soft"),
+        Voice("Achird", VoiceGender.MALE, "Friendly"),
+        Voice("Algenib", VoiceGender.MALE, "Gravelly"),
+        Voice("Algieba", VoiceGender.MALE, "Smooth"),
+        Voice("Alnilam", VoiceGender.MALE, "Firm"),
+        Voice("Autonoe", VoiceGender.FEMALE, "Bright"),
+        Voice("Callirrhoe", VoiceGender.FEMALE, "Easy-going"),
+        Voice("Despina", VoiceGender.FEMALE, "Smooth"),
+        Voice("Enceladus", VoiceGender.MALE, "Breathy"),
+        Voice("Erinome", VoiceGender.FEMALE, "Clear"),
+        Voice("Gacrux", VoiceGender.FEMALE, "Mature"),
+        Voice("Iapetus", VoiceGender.MALE, "Clear"),
+        Voice("Laomedeia", VoiceGender.FEMALE, "Upbeat"),
+        Voice("Pulcherrima", VoiceGender.FEMALE, "Forward"),
+        Voice("Rasalgethi", VoiceGender.MALE, "Informative"),
+        Voice("Sadachbia", VoiceGender.MALE, "Lively"),
+        Voice("Sadaltager", VoiceGender.MALE, "Knowledgeable"),
+        Voice("Schedar", VoiceGender.MALE, "Even"),
+        Voice("Sulafat", VoiceGender.FEMALE, "Warm"),
+        Voice("Umbriel", VoiceGender.MALE, "Easy-going"),
+        Voice("Vindemiatrix", VoiceGender.FEMALE, "Gentle"),
+        Voice("Zubenelgenubi", VoiceGender.MALE, "Casual"),
+    )
+
+    fun find(name: String): Voice? = all.firstOrNull { it.name.equals(name.trim(), ignoreCase = true) }
+
+    /** Alphabetical within gender so a long list is scannable. */
+    fun byGender(gender: VoiceGender): List<Voice> = all.filter { it.gender == gender }.sortedBy { it.name }
 }

@@ -6,6 +6,8 @@ import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,6 +20,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.ExpandLess
@@ -27,6 +30,8 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -51,7 +56,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.parlo.app.model.Defaults
+import com.parlo.app.model.VoiceCatalog
+import com.parlo.app.model.VoiceGender
 import com.parlo.app.ui.MainViewModel
 import com.parlo.app.ui.SetupStatus
 import com.parlo.app.ui.main.ComboBox
@@ -128,13 +134,7 @@ fun SettingsSheet(viewModel: MainViewModel, onDismiss: () -> Unit) {
             }
 
             HorizontalDivider()
-            Text("Voice", style = MaterialTheme.typography.labelLarge)
-            ComboBox(
-                label = "Tutor voice",
-                value = ui.config.voice,
-                suggestions = Defaults.voices,
-                onValueChange = { v -> viewModel.updateConfig { it.copy(voice = v) } },
-            )
+            VoiceSection(current = ui.config.voice, onSelect = { v -> viewModel.updateConfig { it.copy(voice = v) } })
             if (ui.live.isActive) {
                 Text("Changing the voice or model reconnects the walk; the conversation carries over.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -183,6 +183,38 @@ fun SettingsSheet(viewModel: MainViewModel, onDismiss: () -> Unit) {
             Spacer(Modifier.height(8.dp))
         }
     }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun VoiceSection(current: String, onSelect: (String) -> Unit) {
+    val selected = VoiceCatalog.find(current)
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Text("Voice", style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+        Text(
+            selected?.let { "${it.name} · ${it.character}" } ?: current,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+    VoiceGender.entries.forEach { gender ->
+        Text(gender.label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(0.dp), modifier = Modifier.fillMaxWidth().testTag("voices_${gender.name.lowercase()}")) {
+            VoiceCatalog.byGender(gender).forEach { v ->
+                FilterChip(
+                    selected = v == selected,
+                    onClick = { onSelect(v.name) },
+                    label = { Text("${v.name} · ${v.character}") },
+                    leadingIcon = if (v == selected) ({ Icon(Icons.Filled.Check, null, Modifier.size(FilterChipDefaults.IconSize)) }) else null,
+                )
+            }
+        }
+    }
+    Text(
+        "Applies to your next walk. You can hear samples of each voice in Google AI Studio.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
 
 @Composable
