@@ -47,7 +47,7 @@ class MessagesTest {
         assertNotNull(setup["contextWindowCompression"]!!.jsonObject["slidingWindow"])
 
         val fns = setup["tools"]!!.jsonArray.single().jsonObject["functionDeclarations"]!!.jsonArray
-        assertEquals(listOf("save_vocab", "switch_language"), fns.map { it.jsonObject["name"]!!.jsonPrimitive.content })
+        assertEquals(listOf("save_vocab", "note_vocab", "switch_language"), fns.map { it.jsonObject["name"]!!.jsonPrimitive.content })
         // no nulls / no "temperature" leaking in
         assertFalse(text.contains("null"))
         assertFalse(text.contains("temperature"))

@@ -41,7 +41,11 @@ Commands the user may say at any time, in English or ${c.language}:
 - 'save that word': call save_vocab with the most relevant recent word.
 - 'switch to [language/dialect/level]': switch immediately, call switch_language, keep the matching level for each language, and briefly confirm the switch in the new language.
 
-Proactively call save_vocab for genuinely useful new words you introduce, but no more than a few per session.
+Vocabulary capture (silent, automatic):
+- Call note_vocab, without saying anything about it, whenever the user shows a gap: they ask what a word means, ask how to say something, ask you to repeat a specific word, get stuck or answer in English, or you correct a word they misused. Also note a genuinely useful new word you introduce, at most one per turn.
+- Always include the word in ${c.language}, a short English translation, the sentence it appeared in, and the reason (asked_meaning, asked_how_to_say, corrected, struggled, introduced).
+- Do not note trivial words, names, or words the user clearly already knows. Never announce or confirm a note_vocab call; keep talking naturally.
+- Only call save_vocab when the user explicitly asks to save a word; that one is confirmed to them.
 
 ${opening(c)}
         """.trimIndent()
@@ -104,6 +108,25 @@ ${opening(c)}
                             putJsonObject("language") { put("type", "STRING"); put("description", "The language the word is in, e.g. Spanish") }
                         }
                         putJsonArray("required") { add(kotlinx.serialization.json.JsonPrimitive("word")); add(kotlinx.serialization.json.JsonPrimitive("translation")); add(kotlinx.serialization.json.JsonPrimitive("language")) }
+                    },
+                ),
+                FunctionDeclaration(
+                    name = "note_vocab",
+                    description = "Silently record a word or phrase the user struggled with, asked about, was corrected on, or that you introduced. The app files it as a suggestion for later review. Do not tell the user you called this.",
+                    parameters = buildJsonObject {
+                        put("type", "OBJECT")
+                        putJsonObject("properties") {
+                            putJsonObject("word") { put("type", "STRING"); put("description", "The word or phrase in the target language") }
+                            putJsonObject("translation") { put("type", "STRING"); put("description", "Short English translation") }
+                            putJsonObject("example_sentence") { put("type", "STRING"); put("description", "The sentence from the conversation where it came up") }
+                            putJsonObject("reason") {
+                                put("type", "STRING")
+                                put("description", "Why it was noted")
+                                putJsonArray("enum") { listOf("asked_meaning", "asked_how_to_say", "corrected", "struggled", "introduced").forEach { add(kotlinx.serialization.json.JsonPrimitive(it)) } }
+                            }
+                            putJsonObject("language") { put("type", "STRING"); put("description", "The language the word is in, e.g. Spanish") }
+                        }
+                        putJsonArray("required") { add(kotlinx.serialization.json.JsonPrimitive("word")); add(kotlinx.serialization.json.JsonPrimitive("translation")); add(kotlinx.serialization.json.JsonPrimitive("reason")) }
                     },
                 ),
                 FunctionDeclaration(

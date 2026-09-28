@@ -1,7 +1,9 @@
 package com.parlo.app.data.db
 
 import androidx.room.Room
+import androidx.room.testing.MigrationTestHelper
 import androidx.test.core.app.ApplicationProvider
+import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -11,6 +13,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -99,5 +102,68 @@ class ParloDatabaseTest {
         val gato = vocab.observeAll().first().first { it.word == "gato" }
         vocab.delete(gato)
         assertEquals(listOf("chat", "perro"), vocab.observeAll().first().map { it.word })
+    }
+
+    @Test
+    fun suggestionsCanBeFoundKeptAndDismissed() = runTest {
+        vocab.insert(VocabEntity(word = "perro", translation = "dog", exampleSentence = "", language = "Spanish", savedAt = 1))
+        val s1 = vocab.insert(VocabEntity(word = "gato", translation = "cat", exampleSentence = "", language = "Spanish", savedAt = 2, source = "TUTOR", status = "SUGGESTED", reason = "You asked what it means"))
+        vocab.insert(VocabEntity(word = "pan", translation = "bread", exampleSentence = "", language = "Spanish", savedAt = 3, source = "MINED", status = "SUGGESTED"))
+        vocab.insert(VocabEntity(word = "chat", translation = "cat", exampleSentence = "", language = "French", savedAt = 4, source = "MINED", status = "SUGGESTED"))
+
+        // lookup is case-insensitive on both language and word
+        assertEquals(s1, vocab.find("spanish", "GATO")!!.id)
+        assertNull(vocab.find("Spanish", "chat"))
+        assertEquals(setOf("perro", "gato", "pan"), vocab.wordsFor("Spanish").toSet())
+
+        vocab.setStatus(s1, "KEPT")
+        assertEquals("KEPT", vocab.find("Spanish", "gato")!!.status)
+        assertEquals("TUTOR", vocab.find("Spanish", "gato")!!.source)
+
+        vocab.deleteAllSuggested()
+        assertEquals(listOf("gato", "perro"), vocab.observeAll().first().map { it.word })
+
+        vocab.insert(VocabEntity(word = "vino", translation = "wine", exampleSentence = "", language = "Spanish", savedAt = 5, source = "MINED", status = "SUGGESTED"))
+        vocab.keepAllSuggested()
+        assertTrue(vocab.observeAll().first().none { it.isSuggested })
+    }
+
+    @Test
+    fun sessionsRememberWhenTheyWereMined() = runTest {
+        val id = sessions.insertSession(session())
+        assertNull(sessions.getSession(id)!!.minedAt)
+        sessions.markMined(id, 42)
+        assertEquals(42L, sessions.getSession(id)!!.minedAt)
+    }
+}
+
+@RunWith(AndroidJUnit4::class)
+class ParloDatabaseMigrationTest {
+    private val dbName = "migration-test.db"
+
+    @get:Rule
+    val helper = MigrationTestHelper(InstrumentationRegistry.getInstrumentation(), ParloDatabase::class.java)
+
+    @Test
+    fun migrate1To2KeepsExistingVocabAsKeptManualEntries() {
+        helper.createDatabase(dbName, 1).apply {
+            execSQL("INSERT INTO sessions (id, startedAt, endedAt, language, dialect, level, scenario, correctionStyle, durationMs, recap) VALUES (1, 100, 200, 'Spanish', 'Madrid Spanish', 'INTERMEDIATE', 'FREE', 'GENTLE', 100, 'ok')")
+            execSQL("INSERT INTO vocab (word, translation, exampleSentence, language, savedAt, sessionId) VALUES ('perro', 'dog', 'El perro corre.', 'Spanish', 150, 1)")
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(dbName, 2, true)
+        db.query("SELECT word, source, status, reason FROM vocab").use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals("perro", c.getString(0))
+            assertEquals("MANUAL", c.getString(1))
+            assertEquals("KEPT", c.getString(2))
+            assertEquals("", c.getString(3))
+        }
+        db.query("SELECT minedAt FROM sessions WHERE id = 1").use { c ->
+            assertTrue(c.moveToFirst())
+            assertTrue(c.isNull(0))
+        }
+        db.close()
     }
 }

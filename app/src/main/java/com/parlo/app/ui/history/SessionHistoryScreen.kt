@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -21,10 +22,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.parlo.app.ParloApp
+import com.parlo.app.data.VocabCapture
 import com.parlo.app.data.db.SessionEntity
 import com.parlo.app.model.Level
 import com.parlo.app.model.Scenario
@@ -94,15 +99,40 @@ private fun SessionCard(s: SessionEntity, onClick: () -> Unit, onDelete: () -> U
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SessionDetailScreen(sessionId: Long, onBack: () -> Unit) {
-    val repo = ParloApp.container(LocalContext.current).sessions
+    val container = ParloApp.container(LocalContext.current)
+    val repo = container.sessions
+    val capture = container.vocabCapture
     val data by repo.observeSessionWithTurns(sessionId).collectAsStateWithLifecycle(initialValue = null)
+    val mining by capture.mining.collectAsStateWithLifecycle()
     val s = data?.session
+    val scope = rememberCoroutineScope()
+    val snackbar = remember { SnackbarHostState() }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
                 title = { Text(s?.let { "${it.dialect.ifBlank { it.language }} · ${Level.parse(it.level).label}" } ?: "Session") },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
+                actions = {
+                    if (s != null && s.endedAt != null) {
+                        IconButton(
+                            enabled = sessionId !in mining,
+                            onClick = {
+                                scope.launch {
+                                    val msg = when (val o = capture.mine(sessionId, force = true)) {
+                                        is VocabCapture.Outcome.Found -> "${o.count} new word${if (o.count == 1) "" else "s"} suggested in Vocab"
+                                        VocabCapture.Outcome.NothingNew -> "Nothing new to suggest"
+                                        VocabCapture.Outcome.TooShort -> "Too short a conversation to mine"
+                                        VocabCapture.Outcome.NoApiKey -> "Add a Gemini API key in Settings first"
+                                        is VocabCapture.Outcome.Failed -> "Couldn't find vocab: ${o.message}"
+                                    }
+                                    snackbar.showSnackbar(msg)
+                                }
+                            },
+                        ) { Icon(Icons.Filled.AutoAwesome, "Find vocab in this session") }
+                    }
+                },
             )
         },
     ) { padding ->

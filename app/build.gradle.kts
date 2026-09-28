@@ -37,6 +37,7 @@ android {
         unitTests.isReturnDefaultValues = true
         unitTests.isIncludeAndroidResources = false
     }
+    sourceSets["androidTest"].assets.srcDir("$projectDir/schemas")
 }
 
 ksp { arg("room.schemaLocation", "$projectDir/schemas") }

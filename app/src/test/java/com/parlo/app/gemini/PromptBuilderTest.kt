@@ -28,7 +28,7 @@ class PromptBuilderTest {
         assertTrue(p.contains(Scenario.CAFE.prompt))
         assertTrue(p.contains("Your current correction style is Explicit."))
         // voice commands and tool guidance are always present
-        for (kw in listOf("save_vocab", "switch_language", "slower", "say it in English", "silent")) {
+        for (kw in listOf("save_vocab", "note_vocab", "switch_language", "slower", "say it in English", "silent")) {
             assertTrue("missing '$kw'", p.contains(kw))
         }
     }
@@ -104,7 +104,16 @@ class PromptBuilderTest {
     @Test
     fun `tool declarations match the required schema`() {
         val fns = PromptBuilder.toolDeclarations().single().functionDeclarations.associateBy { it.name }
-        assertEquals(setOf("save_vocab", "switch_language"), fns.keys)
+        assertEquals(setOf("save_vocab", "note_vocab", "switch_language"), fns.keys)
+
+        val note = fns.getValue("note_vocab").parameters!!
+        assertEquals(setOf("word", "translation", "example_sentence", "reason", "language"), note["properties"]!!.jsonObject.keys)
+        assertEquals(listOf("word", "translation", "reason"), note["required"]!!.jsonArray.map { it.jsonPrimitive.content })
+        assertEquals(
+            listOf("asked_meaning", "asked_how_to_say", "corrected", "struggled", "introduced"),
+            note["properties"]!!.jsonObject["reason"]!!.jsonObject["enum"]!!.jsonArray.map { it.jsonPrimitive.content },
+        )
+        assertTrue(fns.getValue("note_vocab").description!!.contains("Do not tell the user"))
 
         val save = fns.getValue("save_vocab").parameters!!
         assertEquals("OBJECT", save["type"]!!.jsonPrimitive.content)

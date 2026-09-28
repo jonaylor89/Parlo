@@ -1,5 +1,6 @@
 package com.parlo.app.data.db
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -17,6 +18,8 @@ data class SessionEntity(
     val correctionStyle: String,
     val durationMs: Long = 0,
     val recap: String? = null,
+    /** When the transcript was mined for vocab; null until the post-walk pass has run. */
+    @ColumnInfo(defaultValue = "NULL") val minedAt: Long? = null,
 )
 
 @Entity(
@@ -46,4 +49,16 @@ data class VocabEntity(
     val language: String,
     val savedAt: Long,
     val sessionId: Long? = null,
-)
+    /** [VocabSource] name. */
+    @ColumnInfo(defaultValue = "MANUAL") val source: String = VocabSource.MANUAL.name,
+    /** [VocabStatus] name. */
+    @ColumnInfo(defaultValue = "KEPT") val status: String = VocabStatus.KEPT.name,
+    /** Why the tutor/miner picked it up, e.g. "You asked what it means". */
+    @ColumnInfo(defaultValue = "") val reason: String = "",
+) {
+    val isSuggested: Boolean get() = status == VocabStatus.SUGGESTED.name
+}
+
+enum class VocabSource { MANUAL, TUTOR, MINED }
+
+enum class VocabStatus { KEPT, SUGGESTED }

@@ -44,6 +44,9 @@ interface SessionDao {
 
     @Query("DELETE FROM sessions WHERE endedAt IS NULL AND id NOT IN (SELECT DISTINCT sessionId FROM turns)")
     suspend fun deleteEmptyUnfinishedSessions()
+
+    @Query("UPDATE sessions SET minedAt = :at WHERE id = :id")
+    suspend fun markMined(id: Long, at: Long)
 }
 
 @Dao
@@ -59,4 +62,19 @@ interface VocabDao {
 
     @Query("SELECT COUNT(*) FROM vocab WHERE sessionId = :sessionId")
     suspend fun countForSession(sessionId: Long): Int
+
+    @Query("SELECT * FROM vocab WHERE language = :language COLLATE NOCASE AND word = :word COLLATE NOCASE LIMIT 1")
+    suspend fun find(language: String, word: String): VocabEntity?
+
+    @Query("SELECT word FROM vocab WHERE language = :language COLLATE NOCASE")
+    suspend fun wordsFor(language: String): List<String>
+
+    @Query("UPDATE vocab SET status = :status WHERE id = :id")
+    suspend fun setStatus(id: Long, status: String)
+
+    @Query("UPDATE vocab SET status = 'KEPT' WHERE status = 'SUGGESTED'")
+    suspend fun keepAllSuggested()
+
+    @Query("DELETE FROM vocab WHERE status = 'SUGGESTED'")
+    suspend fun deleteAllSuggested()
 }

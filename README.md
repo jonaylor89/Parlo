@@ -10,7 +10,7 @@ Native Kotlin + Jetpack Compose (Material 3), Gemini Live API over WebSockets. S
 | --- | --- | --- | --- |
 | ![Main screen](docs/screenshots/main.png) | ![Language picker](docs/screenshots/languages.png) | ![Accent picker](docs/screenshots/accents.png) | ![Search](docs/screenshots/search.png) |
 
-| Settings (API key, voice, model) | Vocabulary | Session history |
+| Settings (API key, voice, model) | Vocabulary (auto-captured suggestions on top) | Session history |
 | --- | --- | --- |
 | ![Settings sheet](docs/screenshots/settings.png) | ![Vocab list](docs/screenshots/vocab.png) | ![Session history](docs/screenshots/history.png) |
 
@@ -26,6 +26,10 @@ Native Kotlin + Jetpack Compose (Material 3), Gemini Live API over WebSockets. S
 - **Level / scenario / correction style** pickers, plus quick-switch chips of recent combos
 - **Voice-driven switching**: say "let's switch to Portuguese" and the tutor calls `switch_language` mid-session
 - **Vocabulary**: say "save that word" and the tutor calls `save_vocab`; review in a list or flashcard mode
+- **Automatic vocab capture** — no need to ask:
+  - *In-session*: the tutor has a silent `note_vocab` tool it calls whenever you show a gap (ask what a word means, ask how to say something, stall, answer in English, get corrected) or introduces a genuinely useful new word. Nothing is spoken; the word lands in Vocabulary as a **Suggested** entry with the reason ("You asked what it means", "Tutor corrected you", …).
+  - *After the session*: the stored transcript is sent once to Gemini `generateContent` (JSON mode) to mine words you didn't know or the tutor introduced, skipping anything already in your list. Sessions with fewer than two learner turns are skipped. Runs in the background after the recap; you can also re-run it from a session's history page (✨).
+  - Suggested entries sit in their own tray at the top of Vocabulary — keep / dismiss individually or all at once. Kept words join the normal list and flashcards.
 - **Session history** with full transcript and spoken end-of-session recap (long-press End to skip the recap)
 - **Automatic model discovery**: lists models advertising `bidiGenerateContent`, prefers the newest native-audio Live model, and lets you override with free text
 - **Resilience**: session resumption handles, exponential-backoff reconnect, connectivity monitoring, fresh-session fallback with recent-transcript context
@@ -70,9 +74,10 @@ None of the tests need a Gemini API key or network access.
 | `LiveModelDiscoveryTest` | `app/src/test` | `/models` pagination, `bidiGenerateContent` filtering, ranking (newest native-audio Live model first), API-key error surfacing. |
 | `MessagesTest` | `app/src/test` | Exact JSON shape of every client message and tolerant parsing of server messages (unknown fields ignored). |
 | `LanguageCatalogTest` | `app/src/test` | Catalog breadth and integrity (every language has accents, unique names), case-insensitive / native-name lookup, search ranking, default config points at a real entry. |
-| `PromptBuilderTest`, `ToolHandlerTest`, `GeminiApiTest` | `app/src/test` | System prompt contents per language/dialect/level/scenario/correction style; `save_vocab` / `switch_language` execution and responses; error classification. |
-| `ParloDatabaseTest` | `app/src/androidTest` | Room DAOs on-device: session/turn ordering and cascade delete, recap persistence, empty-session cleanup, vocab grouping. |
-| `MainScreenSmokeTest` | `app/src/androidTest` | Launches `MainActivity`, checks the pickers render, drives the language picker (search → accent selection, custom accent entry), that Start without a key opens Settings, and that Vocab / History are reachable. |
+| `PromptBuilderTest`, `ToolHandlerTest`, `GeminiApiTest` | `app/src/test` | System prompt contents per language/dialect/level/scenario/correction style; `save_vocab` / `note_vocab` / `switch_language` declarations, execution and responses (silent suggestion, dedupe, promotion of a suggestion by an explicit save); error classification. |
+| `VocabMinerTest` | `app/src/test` | Post-session transcript mining against a `MockWebServer` fake of `generateContent`: request shape (JSON mode, schema, transcript, known-word exclusions), model fallback on 404, fenced/malformed output, dedupe and cap, no request when the learner never spoke. |
+| `ParloDatabaseTest`, `ParloDatabaseMigrationTest` | `app/src/androidTest` | Room DAOs on-device: session/turn ordering and cascade delete, recap persistence, empty-session cleanup, vocab grouping, suggestion find/keep/dismiss, `minedAt`; schema auto-migration 1 → 2 keeps existing vocab as kept manual entries. |
+| `MainScreenSmokeTest`, `VocabScreenTest` | `app/src/androidTest` | Launches `MainActivity`, checks the pickers render, drives the language picker (search → accent selection, custom accent entry), that Start without a key opens Settings, and that Vocab / History are reachable. Renders the Vocab screen against the real store and drives the Suggested tray (keep one, dismiss one, keep all). |
 
 What is *not* covered automatically: a real Gemini Live session (audio quality, model behaviour, actual resumption handles). That needs a key and a phone with earbuds; see [First run](#first-run).
 
@@ -93,7 +98,7 @@ The tutor speaks first and keeps turns short. Things you can say at any time (in
 - "Repeat that slowly"
 - "What does ___ mean?" / "How do I say ___?"
 - "Correct me more" / "Stop correcting me"
-- "Save that word" → stored to Vocabulary
+- "Save that word" → stored to Vocabulary (words you struggle with are also captured silently — see *Automatic vocab capture*)
 - "Let's switch to Italian" / "Make it easier" → switches language / level live
 
 Changing language, dialect, level, scenario, or correction style in the UI during a session sends a text turn to the tutor. Changing voice or model reconnects with session resumption so context is kept.
@@ -119,8 +124,9 @@ app/src/main/java/com/parlo/app/
   (API version is centralised in `GeminiApi.API_VERSION`)
 - Input: 16 kHz mono 16-bit PCM, ~30 ms chunks, base64 in `realtimeInput.audio`
 - Output: 24 kHz mono 16-bit PCM played via `AudioTrack` with a jitter buffer
-- Setup enables `AUDIO` response modality, input/output transcription, session resumption, sliding-window context compression, and the `save_vocab` / `switch_language` tools.
+- Setup enables `AUDIO` response modality, input/output transcription, session resumption, sliding-window context compression, and the `save_vocab` / `note_vocab` / `switch_language` tools.
+- Post-session vocab mining is the only non-Live call: one `POST /v1beta/models/{model}:generateContent` with `responseMimeType: application/json` (tries `gemini-2.5-flash`, then `gemini-2.0-flash`, then `gemini-flash-latest`).
 
 ## Privacy
 
-Everything (transcripts, vocab, settings) is stored locally in the app's private storage. Backups are disabled. The only network traffic is to Google's Gemini API using your own key.
+Everything (transcripts, vocab, settings) is stored locally in the app's private storage. Backups are disabled. The only network traffic is to Google's Gemini API using your own key: the Live session itself, model discovery, and one post-session `generateContent` call that sends that session's transcript for vocab mining.

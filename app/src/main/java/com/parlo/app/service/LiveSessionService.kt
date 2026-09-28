@@ -118,6 +118,7 @@ class LiveSessionService : LifecycleService() {
                 appendTurn(Speaker.SYSTEM, "Saved \"$word\" to vocab")
             },
             onLanguageSwitched = ::onVoiceLanguageSwitch,
+            onVocabNoted = { word -> appendTurn(Speaker.SYSTEM, "Noted \"$word\" for review") },
         )
         setupMediaSession()
         registerNetworkCallback()
@@ -268,7 +269,10 @@ class LiveSessionService : LifecycleService() {
             it.copy(connection = ConnectionState.IDLE, audio = AudioState.IDLE, muted = false, recapInProgress = false, statusText = "")
         }
         lifecycleScope.launch {
-            if (id != null) container.sessions.finishSession(id, endedAt, recap.ifBlank { null }, config)
+            if (id != null) {
+                container.sessions.finishSession(id, endedAt, recap.ifBlank { null }, config)
+                container.vocabCapture.mineInBackground(id)
+            }
             dbSessionId = null
             delay(700)
             stopForeground(STOP_FOREGROUND_REMOVE)
@@ -291,7 +295,10 @@ class LiveSessionService : LifecycleService() {
         val config = _state.value.config
         _state.update { it.copy(connection = ConnectionState.ERROR, audio = AudioState.IDLE, error = error, recapInProgress = false, statusText = error.message) }
         lifecycleScope.launch {
-            if (id != null) container.sessions.finishSession(id, System.currentTimeMillis(), null, config)
+            if (id != null) {
+                container.sessions.finishSession(id, System.currentTimeMillis(), null, config)
+                container.vocabCapture.mineInBackground(id)
+            }
             container.sessions.cleanupEmpty()
             dbSessionId = null
         }

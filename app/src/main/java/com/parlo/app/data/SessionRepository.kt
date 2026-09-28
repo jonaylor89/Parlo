@@ -48,6 +48,12 @@ class SessionRepository(private val dao: SessionDao) {
         )
     }
 
+    suspend fun getSession(id: Long): SessionEntity? = dao.getSession(id)
+
+    suspend fun allTurns(sessionId: Long): List<TurnEntity> = dao.getTurns(sessionId)
+
+    suspend fun markMined(id: Long, at: Long = System.currentTimeMillis()) = dao.markMined(id, at)
+
     suspend fun deleteSession(id: Long) = dao.deleteSession(id)
 
     suspend fun cleanupEmpty() = dao.deleteEmptyUnfinishedSessions()

@@ -10,13 +10,18 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Style
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -24,6 +29,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -34,12 +40,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.parlo.app.ParloApp
 import com.parlo.app.data.db.VocabEntity
+import com.parlo.app.data.db.VocabSource
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -49,12 +58,14 @@ fun VocabListScreen(onBack: () -> Unit) {
     val all by repo.observeAll().collectAsStateWithLifecycle(initialValue = emptyList())
     val scope = rememberCoroutineScope()
     var flashcardMode by remember { mutableStateOf(false) }
-    val grouped = all.groupBy { it.language }.toSortedMap()
+    val suggested = all.filter { it.isSuggested }
+    val kept = all.filterNot { it.isSuggested }
+    val grouped = kept.groupBy { it.language }.toSortedMap()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Vocab (${all.size})") },
+                title = { Text("Vocab (${kept.size})") },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
                 actions = {
                     FilterChip(
@@ -71,7 +82,7 @@ fun VocabListScreen(onBack: () -> Unit) {
         if (all.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Text(
-                    "No words yet.\nSay \"save that word\" during a walk and the tutor will add it here.",
+                    "No words yet.\nWords you ask about or get stuck on are picked up automatically during a walk, and you can always say \"save that word\".",
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(32.dp),
@@ -80,6 +91,32 @@ fun VocabListScreen(onBack: () -> Unit) {
             return@Scaffold
         }
         LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (suggested.isNotEmpty()) {
+                item(key = "header-suggested") {
+                    SuggestedHeader(
+                        count = suggested.size,
+                        onKeepAll = { scope.launch { repo.keepAllSuggested() } },
+                        onDismissAll = { scope.launch { repo.dismissAllSuggested() } },
+                    )
+                }
+                items(suggested, key = { "s-${it.id}" }) { v ->
+                    SuggestedCard(
+                        v,
+                        onKeep = { scope.launch { repo.keep(v) } },
+                        onDismiss = { scope.launch { repo.delete(v) } },
+                    )
+                }
+                if (kept.isNotEmpty()) {
+                    item(key = "header-kept") {
+                        Text(
+                            "Saved",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 16.dp),
+                        )
+                    }
+                }
+            }
             grouped.forEach { (language, words) ->
                 item(key = "header-$language") {
                     Text(
@@ -98,12 +135,75 @@ fun VocabListScreen(onBack: () -> Unit) {
 }
 
 @Composable
+private fun SuggestedHeader(count: Int, onKeepAll: () -> Unit, onDismissAll: () -> Unit) {
+    Column(Modifier.padding(top = 8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Filled.AutoAwesome, null, tint = MaterialTheme.colorScheme.tertiary)
+            Text(
+                "  Suggested · $count",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = onDismissAll) { Text("Dismiss all") }
+            TextButton(onClick = onKeepAll) { Text("Keep all") }
+        }
+        Text(
+            "Picked up automatically from your walks. Keep what's useful.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun SuggestedCard(v: VocabEntity, onKeep: () -> Unit, onDismiss: () -> Unit) {
+    Card(
+        Modifier.fillMaxWidth().semantics { contentDescription = "Suggested ${v.word}" },
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.35f)),
+    ) {
+        Row(Modifier.padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(v.word, style = MaterialTheme.typography.titleMedium)
+                if (v.translation.isNotBlank()) Text(v.translation, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                if (v.exampleSentence.isNotBlank()) {
+                    Text(v.exampleSentence, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Text(
+                    listOf(v.language, v.reason.ifBlank { sourceLabel(v) }).joinToString(" · "),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
+            IconButton(onClick = onDismiss) { Icon(Icons.Filled.Close, "Dismiss ${v.word}", tint = MaterialTheme.colorScheme.onSurfaceVariant) }
+            IconButton(onClick = onKeep) { Icon(Icons.Filled.Check, "Keep ${v.word}", tint = MaterialTheme.colorScheme.primary) }
+        }
+    }
+}
+
+private fun sourceLabel(v: VocabEntity) = when (v.source) {
+    VocabSource.TUTOR.name -> "Noted by the tutor"
+    VocabSource.MINED.name -> "Found in your transcript"
+    else -> "Saved by you"
+}
+
+@Composable
 private fun VocabCard(v: VocabEntity, flashcard: Boolean, onDelete: () -> Unit) {
     var revealed by remember(v.id, flashcard) { mutableStateOf(!flashcard) }
     Card(Modifier.fillMaxWidth().clickable(enabled = flashcard) { revealed = !revealed }) {
         Row(Modifier.padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(v.word, style = MaterialTheme.typography.titleMedium)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(v.word, style = MaterialTheme.typography.titleMedium)
+                    if (v.source != VocabSource.MANUAL.name) {
+                        Icon(
+                            Icons.Filled.AutoAwesome, "Captured automatically",
+                            tint = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.padding(start = 6.dp).size(14.dp),
+                        )
+                    }
+                }
                 AnimatedVisibility(visible = revealed) {
                     Column {
                         if (v.translation.isNotBlank()) Text(v.translation, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)

@@ -8,8 +8,13 @@ import com.parlo.app.data.LiveModelDiscovery
 import com.parlo.app.data.ModelRepository
 import com.parlo.app.data.SessionRepository
 import com.parlo.app.data.SettingsRepository
+import com.parlo.app.data.VocabCapture
 import com.parlo.app.data.VocabRepository
 import com.parlo.app.data.db.ParloDatabase
+import com.parlo.app.gemini.VocabMiner
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
@@ -25,6 +30,13 @@ class AppContainer(context: Context) {
     val sessions = SessionRepository(db.sessionDao())
     val vocab = VocabRepository(db.vocabDao())
     val models = ModelRepository(settings, LiveModelDiscovery(okHttp))
+    /** Outlives the session service so post-walk work (vocab mining) can finish after it stops. */
+    val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    val vocabCapture = VocabCapture(
+        sessions, vocab, settings,
+        VocabMiner(okHttp.newBuilder().readTimeout(60, TimeUnit.SECONDS).build()),
+        appScope,
+    )
 }
 
 class ParloApp : Application() {
