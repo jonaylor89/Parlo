@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
@@ -36,7 +37,7 @@ import kotlin.math.sin
 
 /** Pulsing ring with a distinct look per [AudioState]. */
 @Composable
-fun AudioIndicator(state: AudioState, active: Boolean, modifier: Modifier = Modifier) {
+fun AudioIndicator(state: AudioState, active: Boolean, modifier: Modifier = Modifier, idleLabel: String = "Ready") {
     val transition = rememberInfiniteTransition(label = "pulse")
     val phase by transition.animateFloat(
         initialValue = 0f, targetValue = 1f,
@@ -100,7 +101,7 @@ fun AudioIndicator(state: AudioState, active: Boolean, modifier: Modifier = Modi
                 AudioState.SPEAKING -> Icons.Filled.GraphicEq
                 AudioState.MUTED -> Icons.Filled.MicOff
                 AudioState.RECONNECTING -> Icons.Filled.Sync
-                AudioState.IDLE -> Icons.Outlined.Hearing
+                AudioState.IDLE -> if (active) Icons.Outlined.Hearing else Icons.Filled.DirectionsWalk
             }
             val iconTint = when (state) {
                 AudioState.SPEAKING -> scheme.onPrimary
@@ -116,10 +117,10 @@ fun AudioIndicator(state: AudioState, active: Boolean, modifier: Modifier = Modi
                 AudioState.SPEAKING -> "Tutor speaking"
                 AudioState.MUTED -> "Muted"
                 AudioState.RECONNECTING -> "Reconnecting…"
-                AudioState.IDLE -> if (active) "Your turn" else "Ready"
+                AudioState.IDLE -> if (active) "Your turn" else idleLabel
             },
             style = MaterialTheme.typography.labelLarge,
-            color = color,
+            color = if (state == AudioState.IDLE && !active) scheme.onSurface else color,
         )
     }
 }

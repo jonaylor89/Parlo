@@ -111,7 +111,7 @@ fun LanguagePickerSheet(
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var step by rememberSaveable { mutableStateOf(if (LanguageCatalog.find(language) != null) Step.DIALECT else Step.LANGUAGE) }
+    var step by rememberSaveable { mutableStateOf(Step.LANGUAGE) }
     var chosen by rememberSaveable { mutableStateOf(language) }
     var query by rememberSaveable { mutableStateOf("") }
     var custom by rememberSaveable { mutableStateOf(false) }
@@ -189,6 +189,10 @@ private fun LanguageList(
     val q = query.trim()
     LazyColumn(Modifier.fillMaxWidth()) {
         if (q.isEmpty()) {
+            LanguageCatalog.find(current)?.let { l ->
+                item(key = "current-hdr") { SectionHeader("Current") }
+                item(key = "current-" + l.name) { LanguageRow(l, selected = true) { onLanguage(l) } }
+            }
             item { SectionHeader("Popular") }
             items(LanguageCatalog.popular, key = { "pop-" + it.name }) { l -> LanguageRow(l, l.name == current) { onLanguage(l) } }
             LanguageCatalog.byRegion().forEach { (region, list) ->
@@ -354,7 +358,7 @@ private fun EmptyHint(text: String) {
 }
 
 @Composable
-private fun Flag(flag: String?) {
+internal fun Flag(flag: String?) {
     Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.surfaceContainerHighest, modifier = Modifier.size(40.dp)) {
         Box(contentAlignment = Alignment.Center) {
             if (flag.isNullOrBlank()) Icon(Icons.Filled.Translate, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)

@@ -1,5 +1,9 @@
 package com.parlo.app.ui.settings
 
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,21 +12,28 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -32,6 +43,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -40,15 +53,23 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.parlo.app.model.Defaults
 import com.parlo.app.ui.MainViewModel
+import com.parlo.app.ui.SetupStatus
 import com.parlo.app.ui.main.ComboBox
+
+private const val AI_STUDIO_KEYS = "https://aistudio.google.com/app/apikey"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsSheet(viewModel: MainViewModel, onDismiss: () -> Unit) {
     val ui by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     var apiKeyDraft by remember { mutableStateOf("") }
     var keyVisible by remember { mutableStateOf(false) }
     var editingKey by remember { mutableStateOf(!ui.hasApiKey) }
+    var showAdvanced by remember { mutableStateOf(ui.config.model.isNotBlank()) }
+    val keyFailed = ui.setup == SetupStatus.BAD_KEY
+
+    fun openAiStudio() = context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(AI_STUDIO_KEYS)))
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
@@ -57,65 +78,147 @@ fun SettingsSheet(viewModel: MainViewModel, onDismiss: () -> Unit) {
         ) {
             Text("Settings", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
 
-            Text("Gemini API key", style = MaterialTheme.typography.labelLarge)
-            if (editingKey) {
+            Text("Gemini", style = MaterialTheme.typography.labelLarge)
+            if (editingKey || keyFailed) {
+                if (!ui.hasApiKey) {
+                    Text(
+                        "Parlo talks through your own Gemini key — free from Google AI Studio. It's stored encrypted on this phone and never leaves it except to reach Gemini.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 OutlinedTextField(
                     value = apiKeyDraft,
                     onValueChange = { apiKeyDraft = it },
-                    label = { Text("Paste key from aistudio.google.com") },
+                    label = { Text("Gemini API key") },
+                    placeholder = { Text("AIza…") },
                     singleLine = true,
+                    isError = keyFailed && apiKeyDraft.isBlank(),
+                    supportingText = {
+                        if (keyFailed && apiKeyDraft.isBlank()) Text("That key didn't work — check it was copied fully, or make a new one.")
+                    },
                     visualTransformation = if (keyVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     trailingIcon = {
                         IconButton(onClick = { keyVisible = !keyVisible }) {
-                            Icon(if (keyVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, null)
+                            Icon(if (keyVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, if (keyVisible) "Hide key" else "Show key")
                         }
                     },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().testTag("api_key_field"),
                 )
-                Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                    if (ui.hasApiKey) TextButton(onClick = { editingKey = false }) { Text("Cancel") }
-                    Button(onClick = { viewModel.setApiKey(apiKeyDraft); apiKeyDraft = ""; editingKey = false }, enabled = apiKeyDraft.isNotBlank()) { Text("Save key") }
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    TextButton(onClick = ::openAiStudio) {
+                        Text("Get a free key")
+                        Spacer(Modifier.width(4.dp))
+                        Icon(Icons.AutoMirrored.Filled.OpenInNew, null, Modifier.size(16.dp))
+                    }
+                    Spacer(Modifier.weight(1f))
+                    if (ui.hasApiKey && !keyFailed) TextButton(onClick = { editingKey = false }) { Text("Cancel") }
+                    Button(
+                        onClick = { viewModel.setApiKey(apiKeyDraft); apiKeyDraft = ""; editingKey = false },
+                        enabled = apiKeyDraft.isNotBlank(),
+                    ) { Text("Save key") }
                 }
             } else {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                    Text("Key saved (encrypted on device)", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                    TextButton(onClick = { editingKey = true }) { Text("Replace") }
+                ConnectionRow(ui.setup, model = ui.config.model.ifBlank { ui.models.firstOrNull().orEmpty() }, onRefresh = viewModel::refreshModels)
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Spacer(Modifier.weight(1f))
+                    TextButton(onClick = { editingKey = true }) { Text("Replace key") }
                 }
             }
 
+            HorizontalDivider()
             Text("Voice", style = MaterialTheme.typography.labelLarge)
             ComboBox(
-                label = "Prebuilt voice",
+                label = "Tutor voice",
                 value = ui.config.voice,
                 suggestions = Defaults.voices,
                 onValueChange = { v -> viewModel.updateConfig { it.copy(voice = v) } },
             )
             if (ui.live.isActive) {
-                Text("Changing voice or model reconnects the session (context is resumed).", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Changing the voice or model reconnects the walk; the conversation carries over.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
+            HorizontalDivider()
+            Text("Appearance", style = MaterialTheme.typography.labelLarge)
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Text("Live model", style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
-                if (ui.modelsLoading) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                IconButton(onClick = viewModel::refreshModels, enabled = ui.hasApiKey && !ui.modelsLoading) { Icon(Icons.Filled.Refresh, "Refresh models") }
+                Column(Modifier.weight(1f)) {
+                    Text("Match wallpaper colours", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) "Use Material You instead of Parlo's teal and coral." else "Needs Android 12 or newer.",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(checked = ui.dynamicColor, onCheckedChange = viewModel::setDynamicColor, enabled = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
             }
-            ComboBox(
-                label = if (ui.config.model.isBlank()) "Auto (${ui.models.firstOrNull() ?: "none discovered"})" else "Model override",
-                value = ui.config.model,
-                suggestions = ui.models,
-                onValueChange = { m -> viewModel.updateConfig { it.copy(model = m) } },
-            )
-            if (ui.config.model.isNotBlank()) {
-                TextButton(onClick = { viewModel.updateConfig { it.copy(model = "") } }) { Text("Use auto-detected model") }
+
+            HorizontalDivider()
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Advanced", style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+                IconButton(onClick = { showAdvanced = !showAdvanced }) {
+                    Icon(if (showAdvanced) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, if (showAdvanced) "Hide advanced" else "Show advanced")
+                }
             }
-            ui.modelsError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+            AnimatedVisibility(visible = showAdvanced) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Parlo picks the newest Gemini voice model automatically. Override it only if a specific model works better for you.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    ComboBox(
+                        label = if (ui.config.model.isBlank()) "Automatic" else "Model override",
+                        value = ui.config.model,
+                        suggestions = ui.models,
+                        onValueChange = { m -> viewModel.updateConfig { it.copy(model = m) } },
+                    )
+                    if (ui.config.model.isNotBlank()) {
+                        TextButton(onClick = { viewModel.updateConfig { it.copy(model = "") } }) { Text("Back to automatic") }
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
+@Composable
+private fun ConnectionRow(status: SetupStatus, model: String, onRefresh: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().testTag("connection_row")) {
+        when (status) {
+            SetupStatus.CHECKING -> CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+            SetupStatus.READY -> Icon(Icons.Filled.CheckCircle, null, tint = MaterialTheme.colorScheme.tertiary)
+            else -> Icon(Icons.Filled.ErrorOutline, null, tint = MaterialTheme.colorScheme.error)
+        }
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
             Text(
-                "Models are discovered from the Gemini API (filtered to those supporting bidiGenerateContent). Newest native-audio Live model is chosen by default.",
+                when (status) {
+                    SetupStatus.CHECKING -> "Checking your key…"
+                    SetupStatus.READY -> "Connected"
+                    SetupStatus.OFFLINE -> "Couldn't reach Gemini"
+                    SetupStatus.NO_MODEL -> "No voice model found"
+                    SetupStatus.BAD_KEY, SetupStatus.NO_KEY -> "Key not working"
+                },
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Text(
+                when (status) {
+                    SetupStatus.READY -> "Using ${model.removePrefix("models/")} · key encrypted on device"
+                    SetupStatus.CHECKING -> "Looking for voice models this key can use"
+                    SetupStatus.OFFLINE -> "Check your connection and try again"
+                    SetupStatus.NO_MODEL -> "The key works, but Gemini offered no live voice models"
+                    else -> "Replace the key below"
+                },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(Modifier.height(8.dp))
+        }
+        if (status == SetupStatus.OFFLINE || status == SetupStatus.NO_MODEL || status == SetupStatus.READY) {
+            TextButton(onClick = onRefresh, enabled = status != SetupStatus.CHECKING) { Text("Refresh") }
         }
     }
 }

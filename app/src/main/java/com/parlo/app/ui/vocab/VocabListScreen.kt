@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -16,10 +17,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Style
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -27,7 +27,12 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -57,15 +62,26 @@ fun VocabListScreen(onBack: () -> Unit) {
     val repo = ParloApp.container(LocalContext.current).vocab
     val all by repo.observeAll().collectAsStateWithLifecycle(initialValue = emptyList())
     val scope = rememberCoroutineScope()
+    val snackbar = remember { SnackbarHostState() }
     var flashcardMode by remember { mutableStateOf(false) }
     val suggested = all.filter { it.isSuggested }
     val kept = all.filterNot { it.isSuggested }
     val grouped = kept.groupBy { it.language }.toSortedMap()
 
+    /** Runs [action], then offers Undo for a few seconds. */
+    fun undoable(message: String, action: suspend () -> Unit, undo: suspend () -> Unit) {
+        scope.launch {
+            action()
+            val r = snackbar.showSnackbar(message, actionLabel = "Undo", duration = SnackbarDuration.Short)
+            if (r == SnackbarResult.ActionPerformed) undo()
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
-                title = { Text("Vocab (${kept.size})") },
+                title = { Text("Vocabulary") },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
                 actions = {
                     FilterChip(
@@ -93,17 +109,18 @@ fun VocabListScreen(onBack: () -> Unit) {
         LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (suggested.isNotEmpty()) {
                 item(key = "header-suggested") {
+                    val snapshot = suggested
                     SuggestedHeader(
                         count = suggested.size,
-                        onKeepAll = { scope.launch { repo.keepAllSuggested() } },
-                        onDismissAll = { scope.launch { repo.dismissAllSuggested() } },
+                        onKeepAll = { undoable("Kept ${snapshot.size} words", { repo.keepAllSuggested() }, { repo.unkeep(snapshot) }) },
+                        onDismissAll = { undoable("Skipped ${snapshot.size} words", { repo.dismissAllSuggested() }, { repo.restore(snapshot) }) },
                     )
                 }
                 items(suggested, key = { "s-${it.id}" }) { v ->
                     SuggestedCard(
                         v,
-                        onKeep = { scope.launch { repo.keep(v) } },
-                        onDismiss = { scope.launch { repo.delete(v) } },
+                        onKeep = { undoable("Kept “${v.word}”", { repo.keep(v) }, { repo.unkeep(listOf(v)) }) },
+                        onDismiss = { undoable("Skipped “${v.word}”", { repo.delete(v) }, { repo.restore(listOf(v)) }) },
                     )
                 }
                 if (kept.isNotEmpty()) {
@@ -127,7 +144,7 @@ fun VocabListScreen(onBack: () -> Unit) {
                     )
                 }
                 items(words, key = { it.id }) { v ->
-                    VocabCard(v, flashcardMode) { scope.launch { repo.delete(v) } }
+                    VocabCard(v, flashcardMode) { undoable("Deleted “${v.word}”", { repo.delete(v) }, { repo.restore(listOf(v)) }) }
                 }
             }
         }
@@ -145,14 +162,17 @@ private fun SuggestedHeader(count: Int, onKeepAll: () -> Unit, onDismissAll: () 
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.weight(1f),
             )
-            TextButton(onClick = onDismissAll) { Text("Dismiss all") }
-            TextButton(onClick = onKeepAll) { Text("Keep all") }
         }
         Text(
             "Picked up automatically from your walks. Keep what's useful.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.End) {
+            Spacer(Modifier.weight(1f))
+            TextButton(onClick = onDismissAll) { Text("Skip all") }
+            TextButton(onClick = onKeepAll) { Text("Keep all") }
+        }
     }
 }
 
@@ -162,22 +182,22 @@ private fun SuggestedCard(v: VocabEntity, onKeep: () -> Unit, onDismiss: () -> U
         Modifier.fillMaxWidth().semantics { contentDescription = "Suggested ${v.word}" },
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.35f)),
     ) {
-        Row(Modifier.padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(v.word, style = MaterialTheme.typography.titleMedium)
-                if (v.translation.isNotBlank()) Text(v.translation, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
-                if (v.exampleSentence.isNotBlank()) {
-                    Text(v.exampleSentence, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Text(
-                    listOf(v.language, v.reason.ifBlank { sourceLabel(v) }).joinToString(" · "),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.padding(top = 4.dp),
-                )
+        Column(Modifier.padding(start = 16.dp, top = 12.dp, bottom = 8.dp, end = 8.dp)) {
+            Text(v.word, style = MaterialTheme.typography.titleMedium)
+            if (v.translation.isNotBlank()) Text(v.translation, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+            if (v.exampleSentence.isNotBlank()) {
+                Text(v.exampleSentence, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            IconButton(onClick = onDismiss) { Icon(Icons.Filled.Close, "Dismiss ${v.word}", tint = MaterialTheme.colorScheme.onSurfaceVariant) }
-            IconButton(onClick = onKeep) { Icon(Icons.Filled.Check, "Keep ${v.word}", tint = MaterialTheme.colorScheme.primary) }
+            Text(
+                listOf(v.language, v.reason.ifBlank { sourceLabel(v) }).joinToString(" · "),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
+                OutlinedButton(onClick = onDismiss, modifier = Modifier.semantics { contentDescription = "Skip ${v.word}" }) { Text("Skip") }
+                Button(onClick = onKeep, modifier = Modifier.semantics { contentDescription = "Keep ${v.word}" }) { Text("Keep") }
+            }
         }
     }
 }

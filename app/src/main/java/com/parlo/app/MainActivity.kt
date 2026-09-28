@@ -5,6 +5,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.parlo.app.ui.MainViewModel
 import com.parlo.app.ui.ParloNavHost
 import com.parlo.app.ui.theme.ParloTheme
@@ -17,7 +19,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            ParloTheme { ParloNavHost(viewModel) }
+            val ui by viewModel.uiState.collectAsStateWithLifecycle()
+            ParloTheme(dynamicColor = ui.dynamicColor) { ParloNavHost(viewModel) }
         }
     }
 

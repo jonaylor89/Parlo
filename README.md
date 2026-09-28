@@ -6,15 +6,15 @@ Native Kotlin + Jetpack Compose (Material 3), Gemini Live API over WebSockets. S
 
 ## Screenshots
 
-| Main screen | Language picker | Accent picker | Search (languages, accents, places) |
-| --- | --- | --- | --- |
-| ![Main screen](docs/screenshots/main.png) | ![Language picker](docs/screenshots/languages.png) | ![Accent picker](docs/screenshots/accents.png) | ![Search](docs/screenshots/search.png) |
+| Main screen (setup not finished) | “Today’s walk” sheet | Language picker | Accent picker | Search (languages, accents, places) |
+| --- | --- | --- | --- | --- |
+| ![Main screen](docs/screenshots/main.png) | ![Today's walk sheet](docs/screenshots/walk.png) | ![Language picker](docs/screenshots/languages.png) | ![Accent picker](docs/screenshots/accents.png) | ![Search](docs/screenshots/search.png) |
 
-| Settings (API key, voice, model) | Vocabulary (auto-captured suggestions on top) | Session history |
+| Settings (key, voice; model under Advanced) | Vocabulary (auto-captured suggestions on top) | Past walks |
 | --- | --- | --- |
 | ![Settings sheet](docs/screenshots/settings.png) | ![Vocab list](docs/screenshots/vocab.png) | ![Session history](docs/screenshots/history.png) |
 
-*Captured on an API 35 emulator with no API key configured; tapping **Start Walk Session** without a key opens Settings instead of connecting.*
+*Captured on an API 35 emulator with no API key configured; until a key is saved and a Live model is found the main button reads **Finish setup** and opens Settings.*
 
 ## Features
 
@@ -29,9 +29,9 @@ Native Kotlin + Jetpack Compose (Material 3), Gemini Live API over WebSockets. S
 - **Automatic vocab capture** — no need to ask:
   - *In-session*: the tutor has a silent `note_vocab` tool it calls whenever you show a gap (ask what a word means, ask how to say something, stall, answer in English, get corrected) or introduces a genuinely useful new word. Nothing is spoken; the word lands in Vocabulary as a **Suggested** entry with the reason ("You asked what it means", "Tutor corrected you", …).
   - *After the session*: the stored transcript is sent once to Gemini `generateContent` (JSON mode) to mine words you didn't know or the tutor introduced, skipping anything already in your list. Sessions with fewer than two learner turns are skipped. Runs in the background after the recap; you can also re-run it from a session's history page (✨).
-  - Suggested entries sit in their own tray at the top of Vocabulary — keep / dismiss individually or all at once. Kept words join the normal list and flashcards.
-- **Session history** with full transcript and spoken end-of-session recap (long-press End to skip the recap)
-- **Automatic model discovery**: lists models advertising `bidiGenerateContent`, prefers the newest native-audio Live model, and lets you override with free text
+  - Suggested entries sit in their own tray at the top of Vocabulary — Keep / Skip individually or all at once, with Undo. Kept words join the normal list and flashcards.
+- **Session history** with full transcript and spoken end-of-session recap (a snackbar offers **Skip** while the recap is being written)
+- **Automatic model discovery**: lists models advertising `bidiGenerateContent`, prefers the newest native-audio Live model, and lets you override it under Settings → Advanced
 - **Resilience**: session resumption handles, exponential-backoff reconnect, connectivity monitoring, fresh-session fallback with recent-transcript context
 - **Encrypted API key storage** via `EncryptedSharedPreferences` (Android Keystore)
 
@@ -87,7 +87,7 @@ What is *not* covered automatically: a real Gemini Live session (audio quality, 
 2. Paste your Gemini API key and tap **Save**. It is stored encrypted on-device and never leaves the phone except in requests to `generativelanguage.googleapis.com`.
 3. Tap **Refresh** under *Model* to discover Live-capable models. The best native-audio model is picked automatically; type a model name to override.
 4. Pick a voice (Puck, Aoede, Charon, Kore, Fenrir, Leda, Orus, Zephyr).
-5. Back on the main screen choose language, dialect, level, and correction style, then tap **Start**.
+5. Back on the main screen tap the walk card to choose language, dialect, level, and correction style, then tap **Start Walk Session**.
 
 Parlo will ask for **microphone**, **notification** (Android 13+), and **Bluetooth** (Android 12+) permissions the first time you start a session.
 

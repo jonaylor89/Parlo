@@ -148,7 +148,7 @@ class LiveSessionService : LifecycleService() {
         val apiKey = container.settings.apiKey.value
         if (apiKey.isBlank()) { fail(SessionError.MissingApiKey); return }
         val model = config.model.ifBlank { container.models.defaultModel().orEmpty() }
-        if (model.isBlank()) { fail(SessionError.UnsupportedConfig("no Live model discovered yet — open Settings")); return }
+        if (model.isBlank()) { fail(SessionError.NoLiveModel); return }
         val effective = config.copy(model = model)
 
         hadReadyOnce = false
@@ -203,7 +203,7 @@ class LiveSessionService : LifecycleService() {
         } else if (client.isReady) {
             player.flush()
             client.sendText(PromptBuilder.switchMessage(old, merged))
-            appendTurn(Speaker.SYSTEM, "Switched to ${merged.dialect.ifBlank { merged.language }} · ${merged.level.label} · ${merged.scenario.label}")
+            appendTurn(Speaker.SYSTEM, "Switched to ${merged.dialect.ifBlank { merged.language }} · ${merged.level.label}")
         }
         updateNotification()
     }
@@ -293,7 +293,7 @@ class LiveSessionService : LifecycleService() {
         flushBuffers()
         val id = dbSessionId
         val config = _state.value.config
-        _state.update { it.copy(connection = ConnectionState.ERROR, audio = AudioState.IDLE, error = error, recapInProgress = false, statusText = error.message) }
+        _state.update { it.copy(connection = ConnectionState.ERROR, audio = AudioState.IDLE, error = error, recapInProgress = false, statusText = error.title) }
         lifecycleScope.launch {
             if (id != null) {
                 container.sessions.finishSession(id, System.currentTimeMillis(), null, config)
@@ -532,10 +532,10 @@ class LiveSessionService : LifecycleService() {
         val c = s.config
         val title = "${c.dialect.ifBlank { c.language }} · ${c.level.label}"
         val text = when {
-            s.error != null -> s.error.message
+            s.error != null -> s.error.title
             s.statusText.isNotBlank() -> s.statusText
-            s.muted -> "${c.scenario.label} · Muted"
-            else -> c.scenario.label
+            s.muted -> "Muted"
+            else -> "Listening"
         }
         val open = PendingIntent.getActivity(
             this, 0, Intent(this, MainActivity::class.java).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),

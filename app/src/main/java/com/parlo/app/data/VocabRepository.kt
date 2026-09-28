@@ -43,6 +43,12 @@ class VocabRepository(private val dao: VocabDao) {
     suspend fun dismissAllSuggested() = dao.deleteAllSuggested()
     suspend fun delete(vocab: VocabEntity) = dao.delete(vocab)
 
+    /** Undo for [delete]/[dismissAllSuggested]: re-inserts rows with their original ids. */
+    suspend fun restore(entries: List<VocabEntity>) = entries.forEach { dao.insert(it) }
+
+    /** Undo for [keep]/[keepAllSuggested]. */
+    suspend fun unkeep(entries: List<VocabEntity>) = entries.forEach { dao.setStatus(it.id, VocabStatus.SUGGESTED.name) }
+
     private suspend fun upsert(
         word: String,
         translation: String,

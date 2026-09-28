@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -81,6 +82,13 @@ class SettingsRepository(private val context: Context) {
         }
     }
 
+    /** Whether to follow the wallpaper (Material You) instead of Parlo's own colours. Off by default. */
+    val dynamicColor: Flow<Boolean> = context.dataStore.data.map { it[DYNAMIC_COLOR] ?: false }
+
+    suspend fun setDynamicColor(enabled: Boolean) {
+        context.dataStore.edit { it[DYNAMIC_COLOR] = enabled }
+    }
+
     val cachedModels: Flow<List<String>> = context.dataStore.data.map { p ->
         p[CACHED_MODELS]?.split('\n')?.filter { it.isNotBlank() } ?: emptyList()
     }
@@ -111,6 +119,7 @@ class SettingsRepository(private val context: Context) {
         val MODEL = stringPreferencesKey("model")
         val RECENT_COMBOS = stringPreferencesKey("recent_combos")
         val CACHED_MODELS = stringPreferencesKey("cached_models")
+        val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         val json = Json { ignoreUnknownKeys = true }
         val comboListSerializer = ListSerializer(LanguageCombo.serializer())
     }

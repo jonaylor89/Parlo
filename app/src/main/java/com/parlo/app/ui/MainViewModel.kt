@@ -34,12 +34,31 @@ data class MainUiState(
     val modelsLoading: Boolean = false,
     val modelsError: String? = null,
     val serviceBound: Boolean = false,
-)
+    /** Auto-captured words waiting in the Vocab "Suggested" tray. */
+    val suggestedVocab: Int = 0,
+    val dynamicColor: Boolean = false,
+) {
+    /** True once a walk can actually start: a key is saved and a voice model is known. */
+    val ready: Boolean get() = hasApiKey && (config.model.isNotBlank() || models.isNotEmpty())
+
+    val setup: SetupStatus
+        get() = when {
+            !hasApiKey -> SetupStatus.NO_KEY
+            modelsLoading && models.isEmpty() -> SetupStatus.CHECKING
+            ready -> SetupStatus.READY
+            modelsError?.contains("API key", ignoreCase = true) == true -> SetupStatus.BAD_KEY
+            modelsError != null -> SetupStatus.OFFLINE
+            else -> SetupStatus.NO_MODEL
+        }
+}
+
+enum class SetupStatus { NO_KEY, CHECKING, BAD_KEY, OFFLINE, NO_MODEL, READY }
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val container = ParloApp.container(app)
     private val settings = container.settings
     private val models = container.models
+    private val vocab = container.vocab
 
     private var service: LiveSessionService? = null
     private var serviceStateJob: Job? = null
@@ -60,6 +79,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }.combine(models.models) { s, m -> s.copy(models = m) }
         .combine(models.loading) { s, l -> s.copy(modelsLoading = l) }
         .combine(models.error) { s, e -> s.copy(modelsError = e) }
+        .combine(vocab.observeAll()) { s, words -> s.copy(suggestedVocab = words.count { it.isSuggested }) }
+        .combine(settings.dynamicColor) { s, d -> s.copy(dynamicColor = d) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, MainUiState())
 
     private val connection = object : ServiceConnection {
@@ -129,6 +150,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun refreshModels() {
         viewModelScope.launch { models.refresh(settings.apiKey.value) }
+    }
+
+    fun setDynamicColor(enabled: Boolean) {
+        viewModelScope.launch { settings.setDynamicColor(enabled) }
     }
 
     override fun onCleared() {

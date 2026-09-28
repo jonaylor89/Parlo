@@ -2,6 +2,7 @@ package com.parlo.app.ui
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -57,12 +58,25 @@ class VocabScreenTest {
         rule.onNodeWithText("la cuenta").assertIsDisplayed() // now in the saved list
         rule.onNodeWithText("$language · 2").assertIsDisplayed()
 
-        rule.onNodeWithContentDescription("Dismiss zumo").performClick()
+        rule.onNodeWithContentDescription("Skip zumo").performClick()
         rule.waitUntil(5_000) { rule.onAllNodes(hasText("zumo")).fetchSemanticsNodes().isEmpty() }
         rule.onNodeWithText("Suggested", substring = true).assertDoesNotExist()
         val rows = runBlocking { repo.observeAll().first().filter { it.language == language } }
         assert(rows.map { it.word }.toSet() == setOf("perro", "la cuenta")) { rows.toString() }
         assert(rows.none { it.isSuggested })
+    }
+
+    @Test
+    fun skippingASuggestionCanBeUndone() {
+        show()
+        rule.waitUntil(5_000) { rule.onAllNodes(hasText("zumo")).fetchSemanticsNodes().isNotEmpty() }
+        rule.onNodeWithContentDescription("Skip zumo").performClick()
+        rule.waitUntil(5_000) { rule.onAllNodes(hasText("Undo")).fetchSemanticsNodes().isNotEmpty() }
+        rule.onNodeWithContentDescription("Suggested zumo").assertDoesNotExist()
+        rule.onNodeWithText("Undo").performClick()
+        rule.waitUntil(5_000) { rule.onAllNodes(hasContentDescription("Suggested zumo")).fetchSemanticsNodes().isNotEmpty() }
+        val rows = runBlocking { repo.observeAll().first().filter { it.language == language } }
+        assert(rows.any { it.word == "zumo" && it.isSuggested }) { rows.toString() }
     }
 
     @Test
