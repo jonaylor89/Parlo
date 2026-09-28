@@ -100,7 +100,7 @@ class LiveSessionService : LifecycleService() {
         container = ParloApp.container(this)
         client = GeminiLiveClient(container.okHttp, lifecycleScope)
         earcons = Earcons(lifecycleScope)
-        player = AudioPlayer(lifecycleScope) { speaking -> tutorSpeaking = speaking; refreshAudioState() }
+        player = AudioPlayer(lifecycleScope, onSpeakingChanged = { speaking -> tutorSpeaking = speaking; refreshAudioState() })
         mic = MicrophoneStreamer(
             scope = lifecycleScope,
             onChunk = { bytes, len -> client.sendAudio(bytes, len) },
