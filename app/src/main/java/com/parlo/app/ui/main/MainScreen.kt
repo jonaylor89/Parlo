@@ -64,7 +64,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.parlo.app.model.ConnectionState
 import com.parlo.app.model.CorrectionStyle
 import com.parlo.app.model.Level
-import com.parlo.app.model.Scenario
 import com.parlo.app.model.Speaker
 import com.parlo.app.model.TranscriptTurn
 import com.parlo.app.ui.MainViewModel
@@ -161,7 +160,7 @@ fun MainScreen(
 
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    "${cfg.dialect.ifBlank { cfg.language }} · ${cfg.level.label} · ${cfg.scenario.label}",
+                    "${cfg.dialect.ifBlank { cfg.language }} · ${cfg.level.label} · ${cfg.correctionStyle.label} corrections",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f),
@@ -173,10 +172,8 @@ fun MainScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     LanguageCard(language = cfg.language, dialect = cfg.dialect, onClick = { showLanguagePicker = true })
                     Text("Level", style = MaterialTheme.typography.labelMedium)
-                    ChipFlow(options = Level.entries, selected = cfg.level, label = { it.label }, onSelect = { l -> viewModel.updateConfig { it.copy(level = l) } })
-                    Text(cfg.level.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("Scenario", style = MaterialTheme.typography.labelMedium)
-                    ChipRow(options = Scenario.entries, selected = cfg.scenario, label = { it.label }, onSelect = { s -> viewModel.updateConfig { it.copy(scenario = s) } })
+                    SegmentedPicker(options = Level.entries, selected = cfg.level, label = { it.shortLabel }, onSelect = { l -> viewModel.updateConfig { it.copy(level = l) } })
+                    Text("${cfg.level.label} — ${cfg.level.description}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text("Corrections", style = MaterialTheme.typography.labelMedium)
                     SegmentedPicker(options = CorrectionStyle.entries, selected = cfg.correctionStyle, label = { it.label }, onSelect = { s -> viewModel.updateConfig { it.copy(correctionStyle = s) } })
                 }

@@ -23,7 +23,7 @@ Native Kotlin + Jetpack Compose (Material 3), Gemini Live API over WebSockets. S
 - **Bluetooth / wired earbud routing** with mid-session route changes
 - **Barge-in**: interrupt the tutor at any time; playback flushes instantly
 - **137+ languages, 800+ regional accents**: a built-in catalog (`LanguageCatalog.kt`) covering every region — Europe, East/Southeast Asia, South Asia, Middle East & Central Asia, Africa, the Americas, Oceania — each language with its major regional accents/dialects (e.g. English × 36, Arabic × 32, French × 27, Spanish × 22). Picked through a searchable bottom sheet: language first (Popular + by region, native names, flags), then accent; search matches language names, native names, accent names and places ("porto", "Québec", "粤语"). Anything not in the catalog can still be typed in as a custom language or accent
-- **Level / scenario / correction style** pickers, plus quick-switch chips of recent combos
+- **Level / correction style** segmented pickers, plus quick-switch chips of recent combos
 - **Voice-driven switching**: say "let's switch to Portuguese" and the tutor calls `switch_language` mid-session
 - **Vocabulary**: say "save that word" and the tutor calls `save_vocab`; review in a list or flashcard mode
 - **Automatic vocab capture** — no need to ask:
@@ -87,7 +87,7 @@ What is *not* covered automatically: a real Gemini Live session (audio quality, 
 2. Paste your Gemini API key and tap **Save**. It is stored encrypted on-device and never leaves the phone except in requests to `generativelanguage.googleapis.com`.
 3. Tap **Refresh** under *Model* to discover Live-capable models. The best native-audio model is picked automatically; type a model name to override.
 4. Pick a voice (Puck, Aoede, Charon, Kore, Fenrir, Leda, Orus, Zephyr).
-5. Back on the main screen choose language, dialect, level, scenario, and correction style, then tap **Start**.
+5. Back on the main screen choose language, dialect, level, and correction style, then tap **Start**.
 
 Parlo will ask for **microphone**, **notification** (Android 13+), and **Bluetooth** (Android 12+) permissions the first time you start a session.
 
@@ -101,7 +101,7 @@ The tutor speaks first and keeps turns short. Things you can say at any time (in
 - "Save that word" → stored to Vocabulary (words you struggle with are also captured silently — see *Automatic vocab capture*)
 - "Let's switch to Italian" / "Make it easier" → switches language / level live
 
-Changing language, dialect, level, scenario, or correction style in the UI during a session sends a text turn to the tutor. Changing voice or model reconnects with session resumption so context is kept.
+Changing language, dialect, level, or correction style in the UI during a session sends a text turn to the tutor. Changing voice or model reconnects with session resumption so context is kept.
 
 ## Project layout
 

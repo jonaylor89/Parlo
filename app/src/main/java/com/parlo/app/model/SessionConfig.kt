@@ -2,9 +2,10 @@ package com.parlo.app.model
 
 import kotlinx.serialization.Serializable
 
-enum class Level(val label: String, val description: String, val guidance: String) {
+enum class Level(val label: String, val shortLabel: String, val description: String, val guidance: String) {
     SUPER_BEGINNER(
         "Super Beginner",
+        "Super",
         "Mostly English. One tiny phrase at a time, translated and repeated.",
         "Super Beginner: the user understands almost nothing yet. Lead the conversation in English and teach one very short phrase (one to four words) at a time. " +
             "Say the phrase slowly and clearly, then give the English meaning right away, then say the phrase slowly once more and ask the user to repeat it. " +
@@ -14,15 +15,18 @@ enum class Level(val label: String, val description: String, val guidance: Strin
     ),
     BEGINNER(
         "Beginner",
+        "Beginner",
         "Slow and simple, brief English help when stuck.",
         "Beginner: slow, clear, simple vocabulary, short sentences, and occasional brief English support.",
     ),
     INTERMEDIATE(
         "Intermediate",
+        "Interm.",
         "Natural pace, English only when needed.",
         "Intermediate: natural pace, English only when the user is stuck.",
     ),
     ADVANCED(
+        "Advanced",
         "Advanced",
         "Native pace, idioms and regional expressions.",
         "Advanced: native pace, idioms and regional expressions, no English unless asked.",

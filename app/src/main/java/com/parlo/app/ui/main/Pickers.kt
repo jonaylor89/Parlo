@@ -4,8 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -83,26 +81,6 @@ fun <T> SegmentedPicker(
                 onClick = { onSelect(opt) },
                 shape = SegmentedButtonDefaults.itemShape(index = i, count = options.size),
             ) { Text(label(opt), maxLines = 1) }
-        }
-    }
-}
-
-/** Chips that wrap onto multiple lines instead of scrolling; for short option sets that must all stay visible. */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-fun <T> ChipFlow(
-    options: List<T>,
-    selected: T?,
-    label: (T) -> String,
-    onSelect: (T) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    FlowRow(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        options.forEach { opt ->
-            FilterChip(selected = opt == selected, onClick = { onSelect(opt) }, label = { Text(label(opt)) })
         }
     }
 }

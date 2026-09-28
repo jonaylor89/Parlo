@@ -1,8 +1,11 @@
 package com.parlo.app.ui
 
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -12,7 +15,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.parlo.app.MainActivity
 import com.parlo.app.model.CorrectionStyle
 import com.parlo.app.model.Level
-import com.parlo.app.model.Scenario
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -29,10 +31,18 @@ class MainScreenSmokeTest {
     fun mainScreenShowsSessionControls() {
         rule.onNodeWithText("Parlo").assertIsDisplayed()
         rule.onNodeWithText("Start Walk Session").assertIsDisplayed()
-        Level.entries.forEach { rule.onNodeWithText(it.label).assertIsDisplayed() }
-        CorrectionStyle.entries.forEach { rule.onNodeWithText(it.label).assertIsDisplayed() }
-        rule.onNodeWithText(Scenario.FREE.label).assertIsDisplayed()
-        rule.onNodeWithText(Scenario.CAFE.label).assertIsDisplayed()
+        Level.entries.forEach { rule.onAllNodesWithText(it.shortLabel).onFirst().assertIsDisplayed() }
+        CorrectionStyle.entries.forEach { rule.onAllNodesWithText(it.label).onFirst().assertIsDisplayed() }
+        rule.onAllNodesWithText("Scenario").assertCountEquals(0)
+    }
+
+    @Test
+    fun levelSegmentSwitchesTheLevelDescription() {
+        rule.onNodeWithText(Level.SUPER_BEGINNER.shortLabel).performClick()
+        rule.onAllNodesWithText(Level.SUPER_BEGINNER.description, substring = true).onFirst().assertIsDisplayed()
+        rule.onNodeWithText(Level.ADVANCED.shortLabel).performClick()
+        rule.onAllNodesWithText(Level.ADVANCED.description, substring = true).onFirst().assertIsDisplayed()
+        rule.onAllNodesWithText(Level.SUPER_BEGINNER.description, substring = true).assertCountEquals(0)
     }
 
     @Test
