@@ -52,6 +52,15 @@ class SettingsRepository(private val context: Context) {
         _apiKey.value = key.trim()
     }
 
+    private val _jevApiKey = MutableStateFlow(secure.getString(KEY_JEV_API, "") ?: "")
+    /** TypeSafe (Jev) key; optional. When blank, vocab candidates skip the judge and all land as suggestions. */
+    val jevApiKey: StateFlow<String> = _jevApiKey
+
+    fun setJevApiKey(key: String) {
+        secure.edit().putString(KEY_JEV_API, key.trim()).apply()
+        _jevApiKey.value = key.trim()
+    }
+
     val config: Flow<SessionConfig> = context.dataStore.data.map { it.toConfig() }
 
     suspend fun currentConfig(): SessionConfig = config.first()
@@ -109,6 +118,7 @@ class SettingsRepository(private val context: Context) {
 
     private companion object {
         const val KEY_API = "gemini_api_key"
+        const val KEY_JEV_API = "typesafe_api_key"
         const val MAX_RECENT = 6
         val LANGUAGE = stringPreferencesKey("language")
         val DIALECT = stringPreferencesKey("dialect")

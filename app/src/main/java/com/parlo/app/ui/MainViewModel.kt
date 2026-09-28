@@ -34,6 +34,7 @@ data class MainUiState(
     val config: SessionConfig = SessionConfig(),
     val recentCombos: List<LanguageCombo> = emptyList(),
     val hasApiKey: Boolean = false,
+    val hasJevKey: Boolean = false,
     val models: List<String> = emptyList(),
     val modelsLoading: Boolean = false,
     val modelsError: String? = null,
@@ -90,7 +91,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             hasApiKey = key.isNotBlank(),
             serviceBound = isBound,
         )
-    }.combine(models.models) { s, m -> s.copy(models = m) }
+    }.combine(settings.jevApiKey) { s, k -> s.copy(hasJevKey = k.isNotBlank()) }
+        .combine(models.models) { s, m -> s.copy(models = m) }
         .combine(models.loading) { s, l -> s.copy(modelsLoading = l) }
         .combine(models.error) { s, e -> s.copy(modelsError = e) }
         .combine(vocab.observeAll()) { s, words -> s.copy(suggestedVocab = words.count { it.isSuggested }) }
@@ -161,6 +163,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setApiKey(key: String) {
         settings.setApiKey(key)
+    }
+
+    fun setJevApiKey(key: String) {
+        settings.setJevApiKey(key)
+    }
+
+    fun clearJevApiKey() {
+        settings.setJevApiKey("")
     }
 
     fun refreshModels() {

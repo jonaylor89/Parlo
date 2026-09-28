@@ -193,6 +193,21 @@ fun SettingsSheet(viewModel: MainViewModel, onDismiss: () -> Unit) {
                     if (ui.config.model.isNotBlank()) {
                         TextButton(onClick = { viewModel.updateConfig { it.copy(model = "") } }) { Text("Back to automatic") }
                     }
+
+                    HorizontalDivider()
+                    Text("Jev API key (optional)", style = MaterialTheme.typography.labelLarge)
+                    SecretKeyField(
+                        hint = "Paste key from typesafe.ai",
+                        saved = ui.hasJevKey,
+                        onSave = viewModel::setJevApiKey,
+                        onClear = viewModel::clearJevApiKey,
+                        startEditing = false,
+                    )
+                    Text(
+                        "TypeSafe's Jev model judges every auto-captured word: sure bets are saved outright, borderline ones stay in Suggested, noise is dropped. Without a key everything goes to Suggested for you to review.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
             Spacer(Modifier.height(8.dp))
@@ -308,6 +323,56 @@ private fun ConnectionRow(status: SetupStatus, model: String, onRefresh: () -> U
         }
         if (status == SetupStatus.OFFLINE || status == SetupStatus.NO_MODEL || status == SetupStatus.READY) {
             TextButton(onClick = onRefresh, enabled = status != SetupStatus.CHECKING) { Text("Refresh") }
+        }
+    }
+}
+
+/**
+ * Masked key entry that collapses to a "saved" row once a key exists. [onClear] adds a
+ * "Remove" action for optional keys; [startEditing] false keeps optional fields collapsed
+ * until the user asks for them.
+ */
+@Composable
+private fun SecretKeyField(
+    hint: String,
+    saved: Boolean,
+    onSave: (String) -> Unit,
+    onClear: (() -> Unit)? = null,
+    startEditing: Boolean = true,
+) {
+    var draft by remember { mutableStateOf("") }
+    var visible by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf(startEditing && !saved) }
+
+    if (editing) {
+        OutlinedTextField(
+            value = draft,
+            onValueChange = { draft = it },
+            label = { Text(hint) },
+            singleLine = true,
+            visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            trailingIcon = {
+                IconButton(onClick = { visible = !visible }) {
+                    Icon(if (visible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, null)
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+            if (saved || !startEditing) TextButton(onClick = { editing = false; draft = "" }) { Text("Cancel") }
+            Button(onClick = { onSave(draft); draft = ""; editing = false }, enabled = draft.isNotBlank()) { Text("Save key") }
+        }
+    } else if (saved) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Text("Key saved (encrypted on device)", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            if (onClear != null) TextButton(onClick = onClear) { Text("Remove") }
+            TextButton(onClick = { editing = true }) { Text("Replace") }
+        }
+    } else {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Text("No key — auto-captured words all go to Suggested", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            TextButton(onClick = { editing = true }) { Text("Add key") }
         }
     }
 }

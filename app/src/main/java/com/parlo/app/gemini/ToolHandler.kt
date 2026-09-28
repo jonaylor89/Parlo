@@ -20,7 +20,7 @@ class ToolHandler(
     private val sessionId: () -> Long?,
     private val onVocabSaved: suspend (word: String) -> Unit,
     private val onLanguageSwitched: suspend (LanguageCombo) -> Unit,
-    private val onVocabNoted: suspend (word: String) -> Unit = {},
+    private val onVocabNoted: suspend (id: Long, word: String) -> Unit = { _, _ -> },
 ) {
     suspend fun handle(call: FunctionCall): FunctionResponse {
         val args = call.args ?: JsonObject(emptyMap())
@@ -60,7 +60,7 @@ class ToolHandler(
             source = VocabSource.TUTOR,
             reason = VocabCapture.reasonLabel(args.str("reason")),
         )
-        if (id != null) onVocabNoted(word)
+        if (id != null) onVocabNoted(id, word)
         return buildJsonObject {
             put("result", if (id != null) "noted" else "already_known")
             put("note", "Do not mention this to the user; continue the conversation.")

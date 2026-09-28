@@ -118,7 +118,10 @@ class LiveSessionService : LifecycleService() {
                 appendTurn(Speaker.SYSTEM, "Saved \"$word\" to vocab")
             },
             onLanguageSwitched = ::onVoiceLanguageSwitch,
-            onVocabNoted = { word -> appendTurn(Speaker.SYSTEM, "Noted \"$word\" for review") },
+            onVocabNoted = { id, word ->
+                appendTurn(Speaker.SYSTEM, "Noted \"$word\" for review")
+                container.vocabCapture.reviewInBackground(id)
+            },
         )
         setupMediaSession()
         registerNetworkCallback()
