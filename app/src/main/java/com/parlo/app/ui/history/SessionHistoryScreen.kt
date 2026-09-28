@@ -41,7 +41,6 @@ import com.parlo.app.ParloApp
 import com.parlo.app.data.VocabCapture
 import com.parlo.app.data.db.SessionEntity
 import com.parlo.app.model.Level
-import com.parlo.app.model.Scenario
 import com.parlo.app.model.Speaker
 import com.parlo.app.model.TranscriptTurn
 import com.parlo.app.ui.main.TurnBubble
@@ -84,7 +83,6 @@ private fun SessionCard(s: SessionEntity, onClick: () -> Unit, onDelete: () -> U
         Row(Modifier.padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("${s.dialect.ifBlank { s.language }} · ${Level.parse(s.level).label}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text(Scenario.parse(s.scenario).label, style = MaterialTheme.typography.bodyMedium)
                 Text(
                     "${formatDate(s.startedAt)} · ${formatDuration(s.durationMs)}" + if (s.endedAt == null) " · in progress" else "",
                     style = MaterialTheme.typography.bodySmall,
@@ -141,7 +139,7 @@ fun SessionDetailScreen(sessionId: Long, onBack: () -> Unit) {
             if (s != null) {
                 item {
                     Text(
-                        "${Scenario.parse(s.scenario).label} · ${formatDate(s.startedAt)} · ${formatDuration(s.durationMs)} · ${turns.size} turns",
+                        "${formatDate(s.startedAt)} · ${formatDuration(s.durationMs)} · ${turns.size} turns",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(bottom = 8.dp),
