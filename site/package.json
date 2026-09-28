@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "astro build && rm -rf dist/_worker.js dist/_routes.json",
     "preview": "astro preview"
   },
   "dependencies": {
