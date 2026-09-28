@@ -91,7 +91,7 @@ class SettingsRepository(private val context: Context) {
 
     private fun Preferences.toConfig() = SessionConfig(
         language = this[LANGUAGE] ?: "Spanish",
-        dialect = this[DIALECT] ?: "Madrid Spanish",
+        dialect = this[DIALECT] ?: SessionConfig().dialect,
         level = Level.parse(this[LEVEL]),
         scenario = Scenario.parse(this[SCENARIO]),
         correctionStyle = CorrectionStyle.parse(this[CORRECTION]),

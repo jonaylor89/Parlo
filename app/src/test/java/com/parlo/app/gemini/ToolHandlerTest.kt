@@ -76,9 +76,13 @@ class ToolHandlerTest {
         handler.handle(FunctionCall(name = "switch_language", args = buildJsonObject { put("language", "Spanish"); put("level", "beginner") }))
         assertEquals(LanguageCombo("Spanish", "Madrid Spanish", Level.BEGINNER), switched.last())
 
-        // new language, no dialect -> dialect defaults to the language name, level kept
-        handler.handle(FunctionCall(name = "switch_language", args = buildJsonObject { put("language", "Portuguese") }))
-        assertEquals(LanguageCombo("Portuguese", "Portuguese", Level.INTERMEDIATE), switched.last())
+        // new language, no dialect -> catalog default dialect, canonical name, level kept
+        handler.handle(FunctionCall(name = "switch_language", args = buildJsonObject { put("language", "portuguese") }))
+        assertEquals(LanguageCombo("Portuguese", "Brazilian Portuguese (São Paulo)", Level.INTERMEDIATE), switched.last())
+
+        // unknown language -> passes through as typed
+        handler.handle(FunctionCall(name = "switch_language", args = buildJsonObject { put("language", "Klingon") }))
+        assertEquals(LanguageCombo("Klingon", "Klingon", Level.INTERMEDIATE), switched.last())
 
         // explicit dialect wins
         val resp = handler.handle(

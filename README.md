@@ -6,9 +6,13 @@ Native Kotlin + Jetpack Compose (Material 3), Gemini Live API over WebSockets. S
 
 ## Screenshots
 
-| Main screen | Settings (API key, voice, model) | Vocabulary | Session history |
+| Main screen | Language picker | Accent picker | Search (languages, accents, places) |
 | --- | --- | --- | --- |
-| ![Main screen](docs/screenshots/main.png) | ![Settings sheet](docs/screenshots/settings.png) | ![Vocab list](docs/screenshots/vocab.png) | ![Session history](docs/screenshots/history.png) |
+| ![Main screen](docs/screenshots/main.png) | ![Language picker](docs/screenshots/languages.png) | ![Accent picker](docs/screenshots/accents.png) | ![Search](docs/screenshots/search.png) |
+
+| Settings (API key, voice, model) | Vocabulary | Session history |
+| --- | --- | --- |
+| ![Settings sheet](docs/screenshots/settings.png) | ![Vocab list](docs/screenshots/vocab.png) | ![Session history](docs/screenshots/history.png) |
 
 *Captured on an API 35 emulator with no API key configured; tapping **Start Walk Session** without a key opens Settings instead of connecting.*
 
@@ -18,7 +22,8 @@ Native Kotlin + Jetpack Compose (Material 3), Gemini Live API over WebSockets. S
 - **Hands-free walking mode**: foreground service with microphone type, notification controls (mute / end), MediaSession headset button support, audio focus, earcons for state changes
 - **Bluetooth / wired earbud routing** with mid-session route changes
 - **Barge-in**: interrupt the tutor at any time; playback flushes instantly
-- **Language / dialect / level / scenario / correction style** pickers, plus quick-switch chips of recent combos
+- **137+ languages, 800+ regional accents**: a built-in catalog (`LanguageCatalog.kt`) covering every region — Europe, East/Southeast Asia, South Asia, Middle East & Central Asia, Africa, the Americas, Oceania — each language with its major regional accents/dialects (e.g. English × 36, Arabic × 32, French × 27, Spanish × 22). Picked through a searchable bottom sheet: language first (Popular + by region, native names, flags), then accent; search matches language names, native names, accent names and places ("porto", "Québec", "粤语"). Anything not in the catalog can still be typed in as a custom language or accent
+- **Level / scenario / correction style** pickers, plus quick-switch chips of recent combos
 - **Voice-driven switching**: say "let's switch to Portuguese" and the tutor calls `switch_language` mid-session
 - **Vocabulary**: say "save that word" and the tutor calls `save_vocab`; review in a list or flashcard mode
 - **Session history** with full transcript and spoken end-of-session recap (long-press End to skip the recap)
@@ -64,9 +69,10 @@ None of the tests need a Gemini API key or network access.
 | `GeminiLiveClientIntegrationTest` | `app/src/test` | Drives the real `GeminiLiveClient` over OkHttp against an in-process fake of the Live WebSocket endpoint (`MockWebServer`): setup handshake and `?key=` auth, `setupComplete` gating, PCM `realtimeInput`, `clientContent`, `toolResponse`, decoding of audio / transcripts / tool calls / cancellations / `interrupted` / `turnComplete`, resumption-handle tracking, `goAway` reconnect that resumes with the handle, fallback to a fresh session when the server rejects the handle, fatal `403` → `InvalidApiKey` with no retry, and exponential backoff after a transient drop. |
 | `LiveModelDiscoveryTest` | `app/src/test` | `/models` pagination, `bidiGenerateContent` filtering, ranking (newest native-audio Live model first), API-key error surfacing. |
 | `MessagesTest` | `app/src/test` | Exact JSON shape of every client message and tolerant parsing of server messages (unknown fields ignored). |
+| `LanguageCatalogTest` | `app/src/test` | Catalog breadth and integrity (every language has accents, unique names), case-insensitive / native-name lookup, search ranking, default config points at a real entry. |
 | `PromptBuilderTest`, `ToolHandlerTest`, `GeminiApiTest` | `app/src/test` | System prompt contents per language/dialect/level/scenario/correction style; `save_vocab` / `switch_language` execution and responses; error classification. |
 | `ParloDatabaseTest` | `app/src/androidTest` | Room DAOs on-device: session/turn ordering and cascade delete, recap persistence, empty-session cleanup, vocab grouping. |
-| `MainScreenSmokeTest` | `app/src/androidTest` | Launches `MainActivity`, checks the pickers render, that Start without a key opens Settings, and that Vocab / History are reachable. |
+| `MainScreenSmokeTest` | `app/src/androidTest` | Launches `MainActivity`, checks the pickers render, drives the language picker (search → accent selection, custom accent entry), that Start without a key opens Settings, and that Vocab / History are reachable. |
 
 What is *not* covered automatically: a real Gemini Live session (audio quality, model behaviour, actual resumption handles). That needs a key and a phone with earbuds; see [First run](#first-run).
 

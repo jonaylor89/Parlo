@@ -1,6 +1,7 @@
 package com.parlo.app.gemini
 
 import com.parlo.app.data.VocabRepository
+import com.parlo.app.model.LanguageCatalog
 import com.parlo.app.model.LanguageCombo
 import com.parlo.app.model.Level
 import kotlinx.serialization.json.JsonObject
@@ -43,12 +44,12 @@ class ToolHandler(
     }
 
     private suspend fun switchLanguage(args: JsonObject): JsonObject {
-        val language = args.str("language").ifBlank { currentLanguage() }
+        val language = LanguageCatalog.canonicalName(args.str("language").ifBlank { currentLanguage() })
         val dialectArg = args.str("dialect")
         val dialect = when {
             dialectArg.isNotBlank() -> dialectArg
             language.equals(currentLanguage(), true) -> currentDialect()
-            else -> language
+            else -> LanguageCatalog.defaultDialectFor(language)
         }
         val levelArg = args.str("level")
         val level = if (levelArg.isBlank()) currentLevel() else Level.parse(levelArg)

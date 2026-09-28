@@ -42,7 +42,7 @@ enum class Scenario(val label: String, val prompt: String) {
 @Serializable
 data class SessionConfig(
     val language: String = "Spanish",
-    val dialect: String = "Madrid Spanish",
+    val dialect: String = "Castilian Spanish (Madrid)",
     val level: Level = Level.INTERMEDIATE,
     val scenario: Scenario = Scenario.FREE,
     val correctionStyle: CorrectionStyle = CorrectionStyle.GENTLE,
@@ -67,19 +67,6 @@ data class LanguageCombo(
 }
 
 object Defaults {
-    val languages = listOf(
-        "Spanish", "French", "German", "Italian", "Portuguese", "Japanese",
-        "Korean", "Mandarin Chinese", "Dutch", "Russian", "Arabic", "Hindi", "English",
-    )
+    val languages: List<String> get() = LanguageCatalog.languages.map { it.name }
     val voices = listOf("Puck", "Aoede", "Charon", "Kore", "Fenrir", "Leda", "Orus", "Zephyr")
-    val dialectSuggestions = mapOf(
-        "Spanish" to listOf("Madrid Spanish", "Mexico City Spanish", "Buenos Aires Spanish", "Andalusian Spanish"),
-        "Japanese" to listOf("Tokyo Japanese", "Kansai Japanese"),
-        "French" to listOf("Parisian French", "Québec French", "Southern French"),
-        "German" to listOf("Standard German", "Bavarian German", "Austrian German", "Swiss German"),
-        "Portuguese" to listOf("Lisbon Portuguese", "Rio de Janeiro Portuguese"),
-        "English" to listOf("British English", "American English", "Australian English"),
-        "Italian" to listOf("Standard Italian", "Roman Italian", "Neapolitan Italian"),
-        "Mandarin Chinese" to listOf("Beijing Mandarin", "Taiwanese Mandarin"),
-    )
 }

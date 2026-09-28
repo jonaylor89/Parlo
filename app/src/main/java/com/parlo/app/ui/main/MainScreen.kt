@@ -63,7 +63,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.parlo.app.model.ConnectionState
 import com.parlo.app.model.CorrectionStyle
-import com.parlo.app.model.Defaults
 import com.parlo.app.model.Level
 import com.parlo.app.model.Scenario
 import com.parlo.app.model.Speaker
@@ -84,6 +83,7 @@ fun MainScreen(
     val context = LocalContext.current
     var showSettings by remember { mutableStateOf(false) }
     var showPickers by remember { mutableStateOf(true) }
+    var showLanguagePicker by remember { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
         if (result[Manifest.permission.RECORD_AUDIO] == true) {
@@ -171,25 +171,7 @@ fun MainScreen(
 
             AnimatedVisibility(visible = showPickers) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    ComboBox(
-                        label = "Target language",
-                        value = cfg.language,
-                        suggestions = Defaults.languages,
-                        onValueChange = { lang ->
-                            viewModel.updateConfig { c ->
-                                val dialect = if (c.dialect.isBlank() || c.dialect.contains(c.language, true)) {
-                                    Defaults.dialectSuggestions[lang]?.firstOrNull() ?: lang
-                                } else c.dialect
-                                c.copy(language = lang, dialect = dialect)
-                            }
-                        },
-                    )
-                    ComboBox(
-                        label = "Regional accent / dialect",
-                        value = cfg.dialect,
-                        suggestions = Defaults.dialectSuggestions[cfg.language] ?: emptyList(),
-                        onValueChange = { d -> viewModel.updateConfig { it.copy(dialect = d) } },
-                    )
+                    LanguageCard(language = cfg.language, dialect = cfg.dialect, onClick = { showLanguagePicker = true })
                     SegmentedPicker(options = Level.entries, selected = cfg.level, label = { it.label }, onSelect = { l -> viewModel.updateConfig { it.copy(level = l) } })
                     Text("Scenario", style = MaterialTheme.typography.labelMedium)
                     ChipRow(options = Scenario.entries, selected = cfg.scenario, label = { it.label }, onSelect = { s -> viewModel.updateConfig { it.copy(scenario = s) } })
@@ -205,6 +187,14 @@ fun MainScreen(
 
     if (showSettings) {
         SettingsSheet(viewModel = viewModel, onDismiss = { showSettings = false })
+    }
+    if (showLanguagePicker) {
+        LanguagePickerSheet(
+            language = cfg.language,
+            dialect = cfg.dialect,
+            onSelect = { lang, dialect -> viewModel.updateConfig { it.copy(language = lang, dialect = dialect) } },
+            onDismiss = { showLanguagePicker = false },
+        )
     }
 }
 

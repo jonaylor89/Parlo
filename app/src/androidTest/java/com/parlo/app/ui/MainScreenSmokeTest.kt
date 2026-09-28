@@ -5,7 +5,9 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.parlo.app.MainActivity
 import com.parlo.app.model.CorrectionStyle
@@ -39,6 +41,27 @@ class MainScreenSmokeTest {
         rule.waitUntil(5_000) { rule.onAllNodes(hasText("Gemini API key")).fetchSemanticsNodes().isNotEmpty() }
         rule.onNodeWithText("Gemini API key").assertIsDisplayed()
         rule.onNodeWithText("Start Walk Session").assertIsDisplayed() // still idle, no session started
+    }
+
+    @Test
+    fun languagePickerSearchesAcrossAccentsAndAppliesSelection() {
+        rule.onNodeWithTag("language_card").performClick()
+        rule.waitUntil(5_000) { rule.onAllNodes(hasText("Accent")).fetchSemanticsNodes().isNotEmpty() }
+        // Default language is in the catalog, so we land on its accent list; go back to languages.
+        rule.onNodeWithContentDescription("Back to languages").performClick()
+        rule.onNodeWithTag("language_search").performTextInput("Québec")
+        rule.onNodeWithText("Québec French (Montréal)").performClick()
+        rule.waitUntil(5_000) { rule.onAllNodes(hasText("Québec French (Montréal)", substring = true)).fetchSemanticsNodes().isNotEmpty() }
+        rule.onNodeWithText("Français", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun languagePickerAcceptsCustomAccent() {
+        rule.onNodeWithTag("language_card").performClick()
+        rule.waitUntil(5_000) { rule.onAllNodes(hasText("Accent")).fetchSemanticsNodes().isNotEmpty() }
+        rule.onNodeWithTag("language_search").performTextInput("Rural Extremaduran Spanish")
+        rule.onNodeWithTag("custom_row").performClick()
+        rule.waitUntil(5_000) { rule.onAllNodes(hasText("Rural Extremaduran Spanish", substring = true)).fetchSemanticsNodes().isNotEmpty() }
     }
 
     @Test
