@@ -127,6 +127,14 @@ app/src/main/java/com/parlo/app/
 - Setup enables `AUDIO` response modality, input/output transcription, session resumption, sliding-window context compression, and the `save_vocab` / `note_vocab` / `switch_language` tools.
 - Post-session vocab mining is the only non-Live call: one `POST /v1beta/models/{model}:generateContent` with `responseMimeType: application/json` (tries `gemini-2.5-flash`, then `gemini-2.0-flash`, then `gemini-flash-latest`).
 
+## Website
+
+`site/` is an Astro landing page (https://jonaylor89.github.io/Parlo once GitHub Pages is enabled for the repo; the `Deploy site` workflow publishes it on every push to `main` that touches `site/`).
+
+```bash
+cd site && npm install && npm run dev
+```
+
 ## Privacy
 
 Everything (transcripts, vocab, settings) is stored locally in the app's private storage. Backups are disabled. The only network traffic is to Google's Gemini API using your own key: the Live session itself, model discovery, and one post-session `generateContent` call that sends that session's transcript for vocab mining.

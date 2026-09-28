@@ -1,0 +1,153 @@
+---
+interface Props { title: string; description: string }
+const { title, description } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={`${base}/screenshots/walk.png`} />
+    <link rel="icon" href={`${base}/icon.png`} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>
+
+<style is:global>
+  :root {
+    /* Material 3 tonal palette lifted from the app's Theme.kt */
+    --primary: #1e5f74;
+    --on-primary: #ffffff;
+    --primary-container: #cdeaf2;
+    --on-primary-container: #00363f;
+    --secondary: #e8735a;
+    --on-secondary: #ffffff;
+    --secondary-container: #ffdbd1;
+    --on-secondary-container: #3b0a02;
+    --tertiary: #5b8c5a;
+    --tertiary-container: #d7f0d4;
+    --on-tertiary-container: #0f2a10;
+    --surface: #fbfaf6;
+    --surface-dim: #efeeea;
+    --surface-low: #f5f4ef;
+    --surface-high: #e9eaea;
+    --surface-variant: #e5ebed;
+    --on-surface: #191c1d;
+    --on-surface-variant: #3f4a4e;
+    --outline: #6f797c;
+    --outline-variant: #bfc8cb;
+    --teal-light: #6fb3c4;
+
+    --r-xs: 4px;
+    --r-s: 8px;
+    --r-m: 12px;
+    --r-l: 16px;
+    --r-xl: 28px;
+    --r-full: 999px;
+
+    --display: 'Fraunces', Georgia, serif;
+    --body: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+    --e1: 0 1px 2px rgba(0, 0, 0, 0.08), 0 1px 3px 1px rgba(0, 0, 0, 0.05);
+    --e3: 0 4px 8px 3px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.12);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --primary: #6fb3c4;
+      --on-primary: #00363f;
+      --primary-container: #0b4a5b;
+      --on-primary-container: #cdeaf2;
+      --secondary: #f2a18c;
+      --on-secondary: #4a1508;
+      --secondary-container: #6b2a19;
+      --on-secondary-container: #ffdbd1;
+      --tertiary: #9fd39c;
+      --tertiary-container: #2c4f2b;
+      --on-tertiary-container: #d7f0d4;
+      --surface: #121415;
+      --surface-dim: #0e1011;
+      --surface-low: #1a1d1e;
+      --surface-high: #262a2b;
+      --surface-variant: #2b3336;
+      --on-surface: #e2e3e2;
+      --on-surface-variant: #bfc8cb;
+      --outline: #899396;
+      --outline-variant: #3f4a4e;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    overflow-x: clip;
+    font-family: var(--body);
+    color: var(--on-surface);
+    background: var(--surface);
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.55;
+  }
+  h1, h2, h3 { font-family: var(--display); letter-spacing: -0.02em; margin: 0; }
+  p { margin: 0; }
+  a { color: var(--primary); }
+  img { display: block; max-width: 100%; }
+
+  .wrap { width: min(1120px, calc(100% - 40px)); margin: 0 auto; }
+  .section { padding: 96px 0; }
+  @media (max-width: 720px) { .section { padding: 64px 0; } }
+
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 14px; border-radius: var(--r-full);
+    background: var(--secondary-container); color: var(--on-secondary-container);
+    font-size: 13px; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase;
+  }
+  .eyebrow.teal { background: var(--primary-container); color: var(--on-primary-container); }
+  .eyebrow.green { background: var(--tertiary-container); color: var(--on-tertiary-container); }
+
+  .h2 { font-size: clamp(32px, 4.5vw, 48px); line-height: 1.08; font-weight: 700; margin-top: 18px; }
+  .lede { font-size: clamp(17px, 1.6vw, 20px); color: var(--on-surface-variant); margin-top: 16px; max-width: 60ch; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    height: 56px; padding: 0 28px; border-radius: var(--r-full);
+    font: 600 16px var(--body); text-decoration: none; cursor: pointer; border: 0;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: var(--e3); }
+  .btn.filled { background: var(--primary); color: var(--on-primary); }
+  .btn.tonal { background: var(--secondary-container); color: var(--on-secondary-container); }
+  .btn.outlined { background: transparent; color: var(--primary); border: 1px solid var(--outline-variant); }
+  .btn svg { width: 20px; height: 20px; }
+
+  .card {
+    background: var(--surface-low); border-radius: var(--r-xl); padding: 28px;
+  }
+
+  /* A phone frame around emulator screenshots (1080x2400 => 9:20). */
+  .phone {
+    position: relative; width: 100%; aspect-ratio: 9 / 20;
+    border-radius: 44px; background: #0b1f26; padding: 12px;
+    box-shadow: 0 30px 60px -20px rgba(0, 54, 63, 0.45), inset 0 0 0 2px rgba(255, 255, 255, 0.06);
+  }
+  .phone::before {
+    content: ''; position: absolute; top: 22px; left: 50%; transform: translateX(-50%);
+    width: 14px; height: 14px; border-radius: 50%; background: #000; z-index: 2;
+    box-shadow: inset 0 0 0 3px #1f2a2e;
+  }
+  .phone img { width: 100%; height: 100%; object-fit: cover; border-radius: 34px; }
+</style>

@@ -1,0 +1,415 @@
+---
+import Base from '../layouts/Base.astro';
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const shot = (name: string) => `${base}/screenshots/${name}.png`;
+const repo = 'https://github.com/jonaylor89/Parlo';
+
+const steps = [
+  { n: '01', title: 'Pop in your earbuds', body: 'Bluetooth or wired, it doesn’t matter. Parlo routes audio to whatever you’re wearing and follows you when it changes.' },
+  { n: '02', title: 'Tap Start, pocket the phone', body: 'A foreground service keeps the conversation alive with the screen off. Play/pause on your earbuds mutes and resumes the mic.' },
+  { n: '03', title: 'Just talk', body: 'Gemini Live listens and answers in real time. Interrupt it mid-sentence, ask for a repeat, switch languages — all by voice.' },
+];
+
+const features = [
+  { icon: 'mic', tone: 'teal', title: 'Real-time, both ways', body: 'Bidirectional audio over a WebSocket to the Gemini Live API. Barge in whenever you like; the tutor stops and listens.' },
+  { icon: 'globe', tone: 'coral', title: '137 languages · 850+ accents', body: 'Castilian or Rioplatense, Carioca or Porto, Québécois or Marseillais. Pick the accent you actually want to hear.' },
+  { icon: 'seedling', tone: 'green', title: 'Super Beginner mode', body: 'Tiny phrases, spoken slowly, with English scaffolding after each one. For the languages where nothing lands yet.' },
+  { icon: 'sparkle', tone: 'coral', title: 'Vocabulary that saves itself', body: 'Struggle with a word and the tutor quietly notes it. After the walk, the transcript is mined for anything you missed.' },
+  { icon: 'tune', tone: 'teal', title: 'Your rules', body: 'Level, correction style, and 30 Gemini voices — with tap-to-hear previews in your target language.' },
+  { icon: 'lock', tone: 'green', title: 'Local-first, no account', body: 'Your own Gemini key, encrypted on-device. No backend, no sign-up, no one in between you and the model.' },
+];
+
+const voices = [
+  ['Puck', 'Upbeat'], ['Charon', 'Informative'], ['Kore', 'Firm'], ['Fenrir', 'Excitable'], ['Aoede', 'Breezy'],
+  ['Leda', 'Youthful'], ['Orus', 'Firm'], ['Zephyr', 'Bright'], ['Achernar', 'Soft'], ['Achird', 'Friendly'],
+  ['Algenib', 'Gravelly'], ['Algieba', 'Smooth'], ['Alnilam', 'Firm'], ['Autonoe', 'Bright'], ['Callirrhoe', 'Easy-going'],
+  ['Despina', 'Smooth'], ['Enceladus', 'Breathy'], ['Erinome', 'Clear'], ['Gacrux', 'Mature'], ['Iapetus', 'Clear'],
+  ['Laomedeia', 'Upbeat'], ['Pulcherrima', 'Forward'], ['Rasalgethi', 'Informative'], ['Sadachbia', 'Lively'], ['Sadaltager', 'Knowledgeable'],
+  ['Schedar', 'Even'], ['Sulafat', 'Warm'], ['Umbriel', 'Easy-going'], ['Vindemiatrix', 'Gentle'], ['Zubenelgenubi', 'Casual'],
+];
+
+const phrases = [
+  ['¡Vamos a caminar!', 'Spanish · Madrid'], ['Bora dar uma volta?', 'Portuguese · Rio'], ['On y va ?', 'French · Québec'],
+  ['Andiamo a fare due passi', 'Italian · Rome'], ['散歩しよう', 'Japanese · Tokyo'], ['Lass uns spazieren gehen', 'German · Vienna'],
+  ['Пойдём гулять', 'Russian · Moscow'], ['산책 가자', 'Korean · Seoul'], ['Hadi yürüyelim', 'Turkish · Istanbul'],
+  ['我们去散步吧', 'Mandarin · Beijing'], ['Chúng ta đi dạo nhé', 'Vietnamese · Hanoi'], ['Πάμε μια βόλτα', 'Greek · Athens'],
+];
+
+const icons: Record<string, string> = {
+  mic: '<path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2Z"/>',
+  globe: '<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm6.93 9h-2.95a15.6 15.6 0 0 0-1.38-5.3A8.03 8.03 0 0 1 18.93 11ZM12 4.04c.83 1.2 1.48 3 1.91 4.96h-3.82c.43-1.96 1.08-3.76 1.91-4.96ZM4.26 15A7.9 7.9 0 0 1 4 13c0-.69.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2s.06 1.34.14 2H4.26Zm.81 2h2.95c.32 1.25.78 2.45 1.38 3.56A8.03 8.03 0 0 1 5.07 17Zm2.95-8H5.07a8.03 8.03 0 0 1 4.33-3.56A15.6 15.6 0 0 0 8.02 9ZM12 19.96c-.83-1.2-1.48-3-1.91-4.96h3.82c-.43 1.96-1.08 3.76-1.91 4.96ZM14.34 13H9.66c-.09-.66-.16-1.32-.16-2s.07-1.35.16-2h4.68c.09.65.16 1.32.16 2s-.07 1.34-.16 2Zm.25 7.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a8.03 8.03 0 0 1-4.33 3.56ZM16.36 15c.08-.66.14-1.32.14-2s-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38Z"/>',
+  seedling: '<path d="M12 22a1 1 0 0 1-1-1v-6.08A8 8 0 0 1 3 7V5a1 1 0 0 1 1-1h2a8 8 0 0 1 6.9 3.94A8 8 0 0 1 20 4h1a1 1 0 0 1 1 1v1a8 8 0 0 1-8 8h-1v7a1 1 0 0 1-1 1Zm1-10h1a6 6 0 0 0 5.92-5H20a6 6 0 0 0-5.92 5H13Zm-2 .87V12A6 6 0 0 0 5 6a6 6 0 0 0 6 6.87Z"/>',
+  sparkle: '<path d="M12 2l1.8 5.4L19 9l-5.2 1.6L12 16l-1.8-5.4L5 9l5.2-1.6L12 2Zm7 12 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3ZM5 15l.8 2.2L8 18l-2.2.8L5 21l-.8-2.2L2 18l2.2-.8L5 15Z"/>',
+  tune: '<path d="M3 17v2h6v-2H3ZM3 5v2h10V5H3Zm10 16v-2h8v-2h-8v-2h-2v6h2ZM7 9v2H3v2h4v2h2V9H7Zm14 4v-2H11v2h10Zm-6-4h2V7h4V5h-4V3h-2v6Z"/>',
+  lock: '<path d="M18 8h-1V6A5 5 0 0 0 7 6v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2Zm-6 9a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm3.1-9H8.9V6a3.1 3.1 0 0 1 6.2 0v2Z"/>',
+};
+---
+
+<Base
+  title="Parlo — talk your way through a language, hands-free"
+  description="Parlo is an open-source Android tutor that talks with you in 137 languages and 850+ accents over Gemini Live. Pocket the phone, put in earbuds, go for a walk."
+>
+  <header class="nav">
+    <div class="wrap nav-inner">
+      <a class="brand" href={`${base}/`}>
+        <img src={`${base}/icon.png`} alt="" width="36" height="36" />
+        <span>Parlo</span>
+      </a>
+      <nav>
+        <a href="#how">How it works</a>
+        <a href="#features">Features</a>
+        <a href="#languages">Languages</a>
+        <a href="#voices">Voices</a>
+        <a href="#privacy">Privacy</a>
+      </nav>
+      <a class="btn tonal small" href={repo}>
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5A12 12 0 0 0 0 12.6c0 5.35 3.44 9.88 8.2 11.48.6.11.82-.26.82-.58v-2.2c-3.34.74-4.04-1.44-4.04-1.44-.55-1.42-1.33-1.8-1.33-1.8-1.09-.76.08-.74.08-.74 1.2.09 1.84 1.26 1.84 1.26 1.07 1.87 2.8 1.33 3.49 1.02.1-.8.42-1.33.76-1.64-2.67-.31-5.47-1.36-5.47-6.06 0-1.34.47-2.43 1.24-3.29-.13-.31-.54-1.56.12-3.25 0 0 1.01-.33 3.3 1.26a11.2 11.2 0 0 1 6.02 0c2.29-1.59 3.3-1.26 3.3-1.26.66 1.69.25 2.94.12 3.25.77.86 1.24 1.95 1.24 3.29 0 4.71-2.81 5.74-5.49 6.05.43.38.81 1.12.81 2.26v3.35c0 .32.22.7.83.58A12.02 12.02 0 0 0 24 12.6 12 12 0 0 0 12 .5Z"/></svg>
+        GitHub
+      </a>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div class="hero-copy">
+        <span class="eyebrow">Android · Open source · Gemini Live</span>
+        <h1>Learn a language <em>the way you'd walk it off.</em></h1>
+        <p class="lede">
+          Parlo is a real-time voice tutor for your pocket. Earbuds in, phone away, and you're in a
+          conversation with a patient native speaker — in any of 137 languages and 850+ regional accents.
+        </p>
+        <div class="cta">
+          <a class="btn filled" href={`${repo}#getting-started`}>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.6 9.48l1.84-3.18c.16-.31.04-.69-.26-.85a.637.637 0 0 0-.83.22l-1.88 3.24a11.43 11.43 0 0 0-8.94 0L5.65 5.67a.643.643 0 0 0-.87-.2c-.28.18-.37.54-.22.83L6.4 9.48A10.78 10.78 0 0 0 1 18h22a10.78 10.78 0 0 0-5.4-8.52ZM7 15.25a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5Zm10 0a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5Z"/></svg>
+            Build the APK
+          </a>
+          <a class="btn outlined" href="#how">See how it works</a>
+        </div>
+        <ul class="hero-stats">
+          <li><strong>137</strong><span>languages</span></li>
+          <li><strong>850+</strong><span>accents</span></li>
+          <li><strong>30</strong><span>voices</span></li>
+          <li><strong>0</strong><span>accounts</span></li>
+        </ul>
+      </div>
+      <div class="hero-phones">
+        <div class="blob blob-a"></div>
+        <div class="blob blob-b"></div>
+        <div class="phone lead"><img src={shot('walk')} alt="Parlo mid-walk: live transcript of a Spanish conversation with the tutor" /></div>
+        <div class="phone trail"><img src={shot('main')} alt="Parlo home screen with the Start orb and today's walk card" /></div>
+        <div class="float-chip chip-1">
+          <span class="dot"></span> Tutor is speaking…
+        </div>
+        <div class="float-chip chip-2">📝 saved <b>dar un paseo</b></div>
+        <div class="float-chip chip-3">🇦🇷 Rioplatense</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW -->
+  <section id="how" class="section">
+    <div class="wrap">
+      <span class="eyebrow teal">How it works</span>
+      <h2 class="h2">Three taps, then none.</h2>
+      <p class="lede">Parlo is designed for the moment your phone is in your pocket. Everything after Start is voice — or an earbud button.</p>
+      <ol class="steps">
+        {steps.map((s) => (
+          <li class="card step">
+            <span class="step-n">{s.n}</span>
+            <h3>{s.title}</h3>
+            <p>{s.body}</p>
+          </li>
+        ))}
+      </ol>
+      <div class="says">
+        <div class="say user">“Wait — how do you say <em>dizzy</em>?”</div>
+        <div class="say tutor">“<em>Mareado.</em> Estoy un poco mareado. Try it — we walked up a hill, after all.”</div>
+        <div class="say user">“Estoy un poco… mareado.”</div>
+        <div class="say tutor">“¡Perfecto! Onward.”</div>
+        <div class="say note">✨ <b>mareado</b> saved to Vocabulary — you asked what it meant</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section id="features" class="section alt">
+    <div class="wrap">
+      <span class="eyebrow">Features</span>
+      <h2 class="h2">Built for ears, not eyes.</h2>
+      <div class="grid3">
+        {features.map((f) => (
+          <article class="card feature">
+            <span class={`ico ${f.tone}`} set:html={`<svg viewBox="0 0 24 24" fill="currentColor">${icons[f.icon]}</svg>`} />
+            <h3>{f.title}</h3>
+            <p>{f.body}</p>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- LANGUAGES -->
+  <section id="languages" class="section">
+    <div class="wrap split">
+      <div>
+        <span class="eyebrow green">Languages & accents</span>
+        <h2 class="h2">Not “Spanish”. <em>Your</em> Spanish.</h2>
+        <p class="lede">
+          Textbook accents are nobody's accent. Parlo's catalogue covers every major regional variety of every
+          language it speaks, with native names and a search that understands places — type “porto”, “Québec” or
+          “Bavaria” and jump straight there. Anything missing can be typed in free-form.
+        </p>
+        <div class="marquee" aria-hidden="true">
+          <div class="track">
+            {[...phrases, ...phrases].map(([p, l]) => (
+              <span class="phrase"><b>{p}</b><small>{l}</small></span>
+            ))}
+          </div>
+        </div>
+        <p class="fine">Say “let's switch to Portuguese” mid-walk and the tutor changes language on the spot.</p>
+      </div>
+      <div class="trio">
+        <div class="phone"><img src={shot('languages')} alt="Language picker with Popular and regional sections" /></div>
+        <div class="phone"><img src={shot('accents')} alt="Accent picker listing Spanish regional varieties" /></div>
+        <div class="phone"><img src={shot('search')} alt="Searching accents by place name" /></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VOCAB & HISTORY -->
+  <section class="section alt">
+    <div class="wrap split reverse">
+      <div class="duo">
+        <div class="phone"><img src={shot('vocab')} alt="Vocabulary screen with auto-captured suggestions on top" /></div>
+        <div class="phone"><img src={shot('history')} alt="Past walks with recaps and word counts" /></div>
+      </div>
+      <div>
+        <span class="eyebrow">Vocabulary & recaps</span>
+        <h2 class="h2">You never say “save that word”.</h2>
+        <p class="lede">
+          Two quiet mechanisms do it for you. During the walk, the tutor has a silent tool it calls whenever it
+          explains, translates or corrects something. Afterwards, the whole transcript is mined for anything else
+          you stumbled on. Both land in a <b>Suggested</b> tray — keep or skip with a tap.
+        </p>
+        <ul class="ticks">
+          <li>Every walk ends with a spoken recap of what you practised</li>
+          <li>Transcripts, recaps and words stay on your phone in a local database</li>
+          <li>Re-run mining on any past walk from History</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- VOICES -->
+  <section id="voices" class="section">
+    <div class="wrap">
+      <div class="voices-head">
+        <div>
+          <span class="eyebrow teal">Voices</span>
+          <h2 class="h2">Thirty tutors. Pick the one you'd walk with.</h2>
+          <p class="lede">Every Gemini prebuilt voice, grouped and labelled by character. Tap any of them in Settings to hear a greeting in your target language before you commit.</p>
+        </div>
+        <div class="phone settings"><img src={shot('settings')} alt="Settings screen with voice chips grouped Female and Male" /></div>
+      </div>
+      <div class="chips">
+        {voices.map(([n, c], i) => (
+          <span class={`vchip ${i % 7 === 0 ? 'sel' : ''}`}>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5Z"/></svg>
+            {n} <i>· {c}</i>
+          </span>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- PRIVACY -->
+  <section id="privacy" class="section alt">
+    <div class="wrap">
+      <div class="privacy card">
+        <div>
+          <span class="eyebrow green">Local-first</span>
+          <h2 class="h2">Your key. Your phone. Nobody else.</h2>
+          <p class="lede">
+            Parlo has no backend and no accounts. You bring a free Gemini API key; it's stored with Android
+            Keystore-backed encryption and only ever travels to Google's API. Sessions, transcripts and vocabulary
+            live in a Room database on the device.
+          </p>
+        </div>
+        <ul class="privacy-list">
+          <li><b>No server</b><span>The app talks to Gemini directly over a WebSocket.</span></li>
+          <li><b>No sign-up</b><span>Install, paste a key, walk.</span></li>
+          <li><b>No telemetry</b><span>Nothing is sent anywhere except your conversation, to Gemini.</span></li>
+          <li><b>Open source</b><span>Kotlin + Jetpack Compose. Read every line.</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="section cta-band">
+    <div class="wrap cta-inner">
+      <h2 class="h2">Go for a walk. Come back bilingual-er.</h2>
+      <p class="lede">Parlo is a personal project, built in the open. Clone it, build it, and put it on your phone in a few minutes.</p>
+      <pre><code>git clone {repo}.git
+cd Parlo && ./gradlew installDebug</code></pre>
+      <div class="cta">
+        <a class="btn filled" href={repo}>View on GitHub</a>
+        <a class="btn outlined" href="https://aistudio.google.com/apikey">Get a free Gemini key</a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <div class="wrap foot-inner">
+      <span><img src={`${base}/icon.png`} alt="" width="22" height="22" /> Parlo</span>
+      <span>Kotlin · Jetpack Compose · Material 3 · Gemini Live</span>
+      <a href={repo}>github.com/jonaylor89/Parlo</a>
+    </div>
+  </footer>
+</Base>
+
+<style>
+  /* nav */
+  .nav { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(14px); background: color-mix(in srgb, var(--surface) 80%, transparent); }
+  .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 72px; gap: 24px; }
+  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--on-surface); font: 700 22px var(--display); }
+  .brand img { border-radius: 10px; }
+  nav { display: flex; gap: 4px; }
+  nav a { padding: 8px 14px; border-radius: var(--r-full); text-decoration: none; color: var(--on-surface-variant); font-weight: 500; font-size: 15px; }
+  nav a:hover { background: var(--surface-high); color: var(--on-surface); }
+  .btn.small { height: 40px; padding: 0 18px; font-size: 14px; }
+  @media (max-width: 860px) { nav { display: none; } }
+
+  /* hero */
+  .hero { padding: 48px 0 32px; overflow: hidden; }
+  .hero-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 48px; align-items: center; }
+  h1 { font-size: clamp(42px, 6vw, 76px); line-height: 1; font-weight: 900; margin-top: 22px; }
+  h1 em, .h2 em { font-style: italic; color: var(--primary); font-weight: 700; }
+  .cta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 30px; }
+  .hero-stats { list-style: none; padding: 0; margin: 40px 0 0; display: flex; gap: 32px; flex-wrap: wrap; }
+  .hero-stats li { display: flex; flex-direction: column; }
+  .hero-stats strong { font: 700 30px var(--display); color: var(--on-surface); }
+  .hero-stats span { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--on-surface-variant); }
+
+  .hero-phones { position: relative; height: 640px; }
+  .hero-phones .phone { position: absolute; width: 260px; }
+  .phone.lead { left: 50%; top: 0; transform: translateX(-30%) rotate(3deg); z-index: 2; }
+  .phone.trail { left: 8%; top: 90px; transform: rotate(-6deg); opacity: 0.95; }
+  .blob { position: absolute; border-radius: 50%; filter: blur(2px); z-index: 0; }
+  .blob-a { width: 420px; height: 420px; background: var(--primary-container); left: -40px; top: 40px; border-radius: 62% 38% 46% 54% / 55% 48% 52% 45%; }
+  .blob-b { width: 260px; height: 260px; background: var(--secondary-container); right: -20px; bottom: 30px; border-radius: 42% 58% 60% 40% / 50% 42% 58% 50%; }
+  .float-chip {
+    position: absolute; z-index: 3; padding: 10px 16px; border-radius: var(--r-full);
+    background: var(--surface); box-shadow: var(--e3); font-size: 14px; font-weight: 500; white-space: nowrap;
+    animation: bob 5s ease-in-out infinite;
+  }
+  .chip-1 { top: 60px; left: 0; display: inline-flex; align-items: center; gap: 8px; }
+  .chip-2 { bottom: 110px; right: 0; animation-delay: -1.5s; }
+  .chip-3 { top: 300px; right: 4%; animation-delay: -3s; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--secondary); box-shadow: 0 0 0 0 var(--secondary); animation: pulse 1.6s infinite; }
+  @keyframes pulse { 70% { box-shadow: 0 0 0 10px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+  @keyframes bob { 50% { transform: translateY(-8px); } }
+  @media (max-width: 960px) {
+    .hero-grid { grid-template-columns: 1fr; }
+    .hero-phones { height: 560px; max-width: 460px; margin: 0 auto; }
+    .hero-phones .phone { width: 220px; }
+  }
+  @media (max-width: 600px) {
+    .hero-phones { height: 520px; }
+    .hero-phones .phone { width: 185px; }
+    .phone.lead { left: auto; right: 0; transform: rotate(3deg); }
+    .phone.trail { left: 0; top: 70px; }
+    .chip-3 { display: none; }
+    .blob-a { width: 300px; height: 300px; }
+  }
+
+  /* steps */
+  .steps { list-style: none; padding: 0; margin: 44px 0 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .step h3 { font-size: 22px; margin-top: 14px; }
+  .step p { color: var(--on-surface-variant); margin-top: 10px; }
+  .step-n { font: 700 14px var(--body); letter-spacing: 0.1em; color: var(--primary); background: var(--primary-container); padding: 4px 10px; border-radius: var(--r-full); }
+  .step:nth-child(2) .step-n { color: var(--on-secondary-container); background: var(--secondary-container); }
+  .step:nth-child(3) .step-n { color: var(--on-tertiary-container); background: var(--tertiary-container); }
+  @media (max-width: 860px) { .steps { grid-template-columns: 1fr; } }
+
+  .says { margin: 48px auto 0; max-width: 620px; display: flex; flex-direction: column; gap: 10px; }
+  .say { padding: 14px 20px; border-radius: 22px; max-width: 85%; font-size: 17px; }
+  .say.user { align-self: flex-end; background: var(--primary); color: var(--on-primary); border-bottom-right-radius: 6px; }
+  .say.tutor { align-self: flex-start; background: var(--surface-high); border-bottom-left-radius: 6px; }
+  .say.note { align-self: center; background: var(--tertiary-container); color: var(--on-tertiary-container); font-size: 14px; border-radius: var(--r-full); margin-top: 6px; }
+
+  /* features */
+  .alt { background: var(--surface-low); }
+  .alt .card { background: var(--surface); }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 44px; }
+  .feature h3 { font-size: 22px; margin-top: 18px; }
+  .feature p { color: var(--on-surface-variant); margin-top: 10px; }
+  .ico { display: inline-grid; place-items: center; width: 52px; height: 52px; border-radius: 16px; }
+  .ico :global(svg) { width: 26px; height: 26px; }
+  .ico.teal { background: var(--primary-container); color: var(--on-primary-container); }
+  .ico.coral { background: var(--secondary-container); color: var(--on-secondary-container); }
+  .ico.green { background: var(--tertiary-container); color: var(--on-tertiary-container); }
+  @media (max-width: 960px) { .grid3 { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 620px) { .grid3 { grid-template-columns: 1fr; } }
+
+  /* languages */
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
+  .split > * { min-width: 0; }
+  .split.reverse > :first-child { order: 0; }
+  .trio { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; align-items: end; }
+  .trio .phone:nth-child(2) { transform: translateY(-28px); }
+  .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; padding: 0 6%; }
+  .duo .phone:nth-child(2) { transform: translateY(40px); }
+  .marquee { overflow: hidden; margin-top: 28px; mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent); }
+  .track { display: flex; gap: 12px; width: max-content; animation: scroll 40s linear infinite; }
+  .phrase { display: inline-flex; flex-direction: column; padding: 10px 16px; border-radius: var(--r-l); background: var(--surface-low); border: 1px solid var(--outline-variant); }
+  .phrase b { font-weight: 600; font-size: 16px; }
+  .phrase small { color: var(--on-surface-variant); font-size: 12px; }
+  @keyframes scroll { to { transform: translateX(-50%); } }
+  .fine { margin-top: 18px; color: var(--on-surface-variant); font-size: 15px; }
+  .ticks { list-style: none; padding: 0; margin: 24px 0 0; display: grid; gap: 12px; }
+  .ticks li { padding-left: 34px; position: relative; }
+  .ticks li::before { content: '✓'; position: absolute; left: 0; top: -1px; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--tertiary-container); color: var(--on-tertiary-container); font-size: 13px; font-weight: 700; }
+  @media (max-width: 960px) {
+    .split { grid-template-columns: 1fr; }
+    .split.reverse > :first-child { order: 1; }
+    .duo { padding: 0 12%; }
+  }
+
+  /* voices */
+  .voices-head { display: grid; grid-template-columns: 1.4fr 1fr; gap: 48px; align-items: center; }
+  .phone.settings { max-width: 260px; margin: 0 auto; transform: rotate(-3deg); }
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 40px; }
+  .vchip { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px 8px 10px; border-radius: var(--r-s); border: 1px solid var(--outline-variant); font-size: 14px; font-weight: 500; transition: background 0.15s; }
+  .vchip i { font-style: normal; color: var(--on-surface-variant); }
+  .vchip svg { width: 18px; height: 18px; color: var(--primary); }
+  .vchip:hover, .vchip.sel { background: var(--secondary-container); color: var(--on-secondary-container); border-color: transparent; }
+  .vchip.sel i, .vchip:hover i, .vchip.sel svg, .vchip:hover svg { color: inherit; }
+  @media (max-width: 860px) { .voices-head { grid-template-columns: 1fr; } }
+
+  /* privacy */
+  .alt .privacy { display: grid; grid-template-columns: 1.2fr 1fr; gap: 40px; padding: 48px; background: var(--primary-container); color: var(--on-primary-container); }
+  .privacy .lede, .privacy-list span { color: var(--on-primary-container); opacity: 0.85; }
+  .privacy .eyebrow { background: var(--surface); }
+  .privacy-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; align-content: center; }
+  .privacy-list li { background: color-mix(in srgb, var(--surface) 55%, transparent); border-radius: var(--r-l); padding: 14px 18px; display: grid; gap: 2px; }
+  .privacy-list b { font-size: 16px; }
+  .privacy-list span { font-size: 14px; }
+  @media (max-width: 860px) { .privacy { grid-template-columns: 1fr; padding: 32px; } }
+
+  /* cta */
+  .cta-band { background: var(--primary); color: var(--on-primary); }
+  .cta-band .lede { color: var(--on-primary); opacity: 0.85; }
+  .cta-band .h2 em { color: var(--secondary-container); }
+  .cta-inner { text-align: center; display: flex; flex-direction: column; align-items: center; }
+  .cta-band .cta { justify-content: center; }
+  .cta-band .btn.filled { background: var(--secondary); color: var(--on-secondary); }
+  .cta-band .btn.outlined { color: var(--on-primary); border-color: rgba(255,255,255,0.35); }
+  pre { margin: 28px 0 8px; padding: 18px 24px; border-radius: var(--r-l); background: rgba(0, 0, 0, 0.25); color: #e6f4f7; font-size: 14px; text-align: left; overflow-x: auto; max-width: 100%; }
+
+  .foot { padding: 28px 0; font-size: 14px; color: var(--on-surface-variant); }
+  .foot-inner { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: center; }
+  .foot-inner span { display: inline-flex; align-items: center; gap: 8px; }
+  .foot-inner img { border-radius: 6px; }
+</style>
