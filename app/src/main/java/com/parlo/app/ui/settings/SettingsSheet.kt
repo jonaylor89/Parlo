@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,8 +26,11 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -42,6 +46,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -60,6 +65,7 @@ import com.parlo.app.model.VoiceCatalog
 import com.parlo.app.model.VoiceGender
 import com.parlo.app.ui.MainViewModel
 import com.parlo.app.ui.SetupStatus
+import com.parlo.app.ui.VoicePreview
 import com.parlo.app.ui.main.ComboBox
 
 private const val AI_STUDIO_KEYS = "https://aistudio.google.com/app/apikey"
@@ -76,6 +82,8 @@ fun SettingsSheet(viewModel: MainViewModel, onDismiss: () -> Unit) {
     val keyFailed = ui.setup == SetupStatus.BAD_KEY
 
     fun openAiStudio() = context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(AI_STUDIO_KEYS)))
+
+    DisposableEffect(Unit) { onDispose { viewModel.stopPreview() } }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
@@ -134,7 +142,14 @@ fun SettingsSheet(viewModel: MainViewModel, onDismiss: () -> Unit) {
             }
 
             HorizontalDivider()
-            VoiceSection(current = ui.config.voice, onSelect = { v -> viewModel.updateConfig { it.copy(voice = v) } })
+            VoiceSection(
+                current = ui.config.voice,
+                preview = ui.voicePreview,
+                canPreview = ui.hasApiKey && !ui.live.isActive,
+                onSelect = { v -> viewModel.updateConfig { it.copy(voice = v) } },
+                onPreview = viewModel::previewVoice,
+                onStopPreview = viewModel::stopPreview,
+            )
             if (ui.live.isActive) {
                 Text("Changing the voice or model reconnects the walk; the conversation carries over.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -187,31 +202,73 @@ fun SettingsSheet(viewModel: MainViewModel, onDismiss: () -> Unit) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun VoiceSection(current: String, onSelect: (String) -> Unit) {
+private fun VoiceSection(
+    current: String,
+    preview: VoicePreview,
+    canPreview: Boolean,
+    onSelect: (String) -> Unit,
+    onPreview: (String) -> Unit,
+    onStopPreview: () -> Unit,
+) {
     val selected = VoiceCatalog.find(current)
+    val busy = preview.loading ?: preview.playing
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         Text("Voice", style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
-        Text(
-            selected?.let { "${it.name} · ${it.character}" } ?: current,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        when {
+            preview.loading != null -> {
+                CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                Spacer(Modifier.width(8.dp))
+                Text("Fetching ${preview.loading}…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            preview.playing != null -> {
+                TextButton(onClick = onStopPreview, contentPadding = PaddingValues(horizontal = 8.dp)) {
+                    Icon(Icons.Filled.Stop, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Playing ${preview.playing}")
+                }
+            }
+            selected != null && canPreview -> {
+                TextButton(onClick = { onPreview(selected.name) }, contentPadding = PaddingValues(horizontal = 8.dp), modifier = Modifier.testTag("voice_preview")) {
+                    Icon(Icons.Filled.PlayArrow, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Hear ${selected.name}")
+                }
+            }
+            else -> Text(
+                selected?.let { "${it.name} · ${it.character}" } ?: current,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+    preview.error?.let {
+        Text("Couldn't play a sample — $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
     }
     VoiceGender.entries.forEach { gender ->
         Text(gender.label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(0.dp), modifier = Modifier.fillMaxWidth().testTag("voices_${gender.name.lowercase()}")) {
             VoiceCatalog.byGender(gender).forEach { v ->
+                val isSelected = v == selected
                 FilterChip(
-                    selected = v == selected,
-                    onClick = { onSelect(v.name) },
+                    selected = isSelected,
+                    onClick = {
+                        onSelect(v.name)
+                        if (canPreview) onPreview(v.name)
+                    },
                     label = { Text("${v.name} · ${v.character}") },
-                    leadingIcon = if (v == selected) ({ Icon(Icons.Filled.Check, null, Modifier.size(FilterChipDefaults.IconSize)) }) else null,
+                    leadingIcon = when {
+                        v.name == busy -> ({ Icon(Icons.AutoMirrored.Filled.VolumeUp, null, Modifier.size(FilterChipDefaults.IconSize)) })
+                        isSelected -> ({ Icon(Icons.Filled.Check, null, Modifier.size(FilterChipDefaults.IconSize)) })
+                        else -> null
+                    },
                 )
             }
         }
     }
     Text(
-        "Applies to your next walk. You can hear samples of each voice in Google AI Studio.",
+        if (canPreview) "Tap a voice to hear it greet you in your current language, then start a walk to use it."
+        else if (busy == null && preview.error == null) "Add a Gemini key above to hear a sample of each voice."
+        else "Applies to your next walk.",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )

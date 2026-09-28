@@ -12,17 +12,21 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.parlo.app.ParloApp
+import com.parlo.app.audio.AudioPlayer
 import com.parlo.app.model.LanguageCombo
 import com.parlo.app.model.LiveSessionState
 import com.parlo.app.model.SessionConfig
 import com.parlo.app.service.LiveSessionService
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class MainUiState(
     val live: LiveSessionState = LiveSessionState(),
@@ -37,6 +41,7 @@ data class MainUiState(
     /** Auto-captured words waiting in the Vocab "Suggested" tray. */
     val suggestedVocab: Int = 0,
     val dynamicColor: Boolean = false,
+    val voicePreview: VoicePreview = VoicePreview(),
 ) {
     /** True once a walk can actually start: a key is saved and a voice model is known. */
     val ready: Boolean get() = hasApiKey && (config.model.isNotBlank() || models.isNotEmpty())
@@ -54,11 +59,20 @@ data class MainUiState(
 
 enum class SetupStatus { NO_KEY, CHECKING, BAD_KEY, OFFLINE, NO_MODEL, READY }
 
+/** Which voice sample is being fetched or played from Settings, if any. */
+data class VoicePreview(val loading: String? = null, val playing: String? = null, val error: String? = null)
+
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val container = ParloApp.container(app)
     private val settings = container.settings
     private val models = container.models
     private val vocab = container.vocab
+    private val sampler = container.voiceSampler
+    private val preview = MutableStateFlow(VoicePreview())
+    private var previewJob: Job? = null
+    private val previewPlayer = AudioPlayer(viewModelScope, onSpeakingChanged = { speaking ->
+        if (!speaking) preview.update { it.copy(playing = null) }
+    })
 
     private var service: LiveSessionService? = null
     private var serviceStateJob: Job? = null
@@ -81,6 +95,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         .combine(models.error) { s, e -> s.copy(modelsError = e) }
         .combine(vocab.observeAll()) { s, words -> s.copy(suggestedVocab = words.count { it.isSuggested }) }
         .combine(settings.dynamicColor) { s, d -> s.copy(dynamicColor = d) }
+        .combine(preview) { s, p -> s.copy(voicePreview = p) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, MainUiState())
 
     private val connection = object : ServiceConnection {
@@ -156,12 +171,44 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { settings.setDynamicColor(enabled) }
     }
 
+    /** Plays a short greeting in [voice] via Gemini TTS; tapping the voice already playing stops it. */
+    fun previewVoice(voice: String) {
+        val key = settings.apiKey.value
+        if (key.isBlank() || uiState.value.live.isActive) return
+        val cfg = uiState.value.config
+        val wasActive = preview.value.playing == voice || preview.value.loading == voice
+        stopPreview()
+        if (wasActive) return
+        preview.value = VoicePreview(loading = voice)
+        previewJob = viewModelScope.launch {
+            val pcm = runCatching { withContext(Dispatchers.IO) { sampler.sample(key, voice, cfg.language, cfg.dialect) } }
+                .getOrElse { e ->
+                    preview.value = VoicePreview(error = e.message ?: "Couldn't fetch a sample")
+                    return@launch
+                }
+            previewPlayer.start()
+            preview.value = VoicePreview(playing = voice)
+            for (off in pcm.indices step PREVIEW_CHUNK) {
+                previewPlayer.enqueue(pcm.copyOfRange(off, minOf(off + PREVIEW_CHUNK, pcm.size)))
+            }
+        }
+    }
+
+    fun stopPreview() {
+        previewJob?.cancel(); previewJob = null
+        previewPlayer.stop()
+        preview.value = VoicePreview()
+    }
+
     override fun onCleared() {
+        stopPreview()
         serviceStateJob?.cancel()
         super.onCleared()
     }
 
     companion object {
+        private const val PREVIEW_CHUNK = 4096
+
         fun factory(app: Application) = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T = MainViewModel(app) as T

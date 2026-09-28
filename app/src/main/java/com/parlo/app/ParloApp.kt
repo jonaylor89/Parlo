@@ -12,6 +12,7 @@ import com.parlo.app.data.VocabCapture
 import com.parlo.app.data.VocabRepository
 import com.parlo.app.data.db.ParloDatabase
 import com.parlo.app.gemini.VocabMiner
+import com.parlo.app.gemini.VoiceSampler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -32,6 +33,7 @@ class AppContainer(context: Context) {
     val models = ModelRepository(settings, LiveModelDiscovery(okHttp))
     /** Outlives the session service so post-walk work (vocab mining) can finish after it stops. */
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    val voiceSampler = VoiceSampler(okHttp.newBuilder().readTimeout(30, TimeUnit.SECONDS).build())
     val vocabCapture = VocabCapture(
         sessions, vocab, settings,
         VocabMiner(okHttp.newBuilder().readTimeout(60, TimeUnit.SECONDS).build()),

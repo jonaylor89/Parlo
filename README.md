@@ -86,7 +86,7 @@ What is *not* covered automatically: a real Gemini Live session (audio quality, 
 1. Open Parlo and tap the gear icon.
 2. Paste your Gemini API key and tap **Save**. It is stored encrypted on-device and never leaves the phone except in requests to `generativelanguage.googleapis.com`.
 3. Tap **Refresh** under *Model* to discover Live-capable models. The best native-audio model is picked automatically; type a model name to override.
-4. Pick a voice — all 30 Gemini prebuilt voices, grouped Female / Male with their character (e.g. "Sulafat · Warm", "Charon · Informative"). Preview them in Google AI Studio.
+4. Pick a voice — all 30 Gemini prebuilt voices, grouped Female / Male with their character (e.g. "Sulafat · Warm", "Charon · Informative"). Tap any voice to hear it greet you in your current language and accent (a short Gemini TTS call on your key, cached per voice).
 5. Back on the main screen tap the walk card to choose language, dialect, level, and correction style, then tap **Start Walk Session**.
 
 Parlo will ask for **microphone**, **notification** (Android 13+), and **Bluetooth** (Android 12+) permissions the first time you start a session.
