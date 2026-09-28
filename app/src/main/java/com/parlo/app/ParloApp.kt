@@ -13,6 +13,8 @@ import com.parlo.app.data.VocabRepository
 import com.parlo.app.data.db.ParloDatabase
 import com.parlo.app.gemini.VocabMiner
 import com.parlo.app.gemini.VoiceSampler
+import com.parlo.app.judge.JevClient
+import com.parlo.app.judge.VocabJudge
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -37,6 +39,7 @@ class AppContainer(context: Context) {
     val vocabCapture = VocabCapture(
         sessions, vocab, settings,
         VocabMiner(okHttp.newBuilder().readTimeout(60, TimeUnit.SECONDS).build()),
+        VocabJudge(JevClient(okHttp.newBuilder().readTimeout(20, TimeUnit.SECONDS).build())),
         appScope,
     )
 }

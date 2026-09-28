@@ -1,14 +1,12 @@
 package com.parlo.app.gemini
 
 import com.parlo.app.data.VocabRepository
-import com.parlo.app.data.db.VocabDao
+import com.parlo.app.data.FakeVocabDao
 import com.parlo.app.data.db.VocabEntity
 import com.parlo.app.data.db.VocabSource
 import com.parlo.app.data.db.VocabStatus
 import com.parlo.app.model.LanguageCombo
 import com.parlo.app.model.Level
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -19,28 +17,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ToolHandlerTest {
-
-    private class FakeVocabDao : VocabDao {
-        val rows = MutableStateFlow<List<VocabEntity>>(emptyList())
-        override suspend fun insert(vocab: VocabEntity): Long {
-            val id = rows.value.size + 1L
-            rows.value = rows.value + vocab.copy(id = id)
-            return id
-        }
-        override suspend fun delete(vocab: VocabEntity) { rows.value = rows.value.filterNot { it.id == vocab.id } }
-        override fun observeAll(): Flow<List<VocabEntity>> = rows
-        override suspend fun countForSession(sessionId: Long) = rows.value.count { it.sessionId == sessionId }
-        override suspend fun find(language: String, word: String) =
-            rows.value.firstOrNull { it.language.equals(language, true) && it.word.equals(word, true) }
-        override suspend fun wordsFor(language: String) = rows.value.filter { it.language.equals(language, true) }.map { it.word }
-        override suspend fun setStatus(id: Long, status: String) {
-            rows.value = rows.value.map { if (it.id == id) it.copy(status = status) else it }
-        }
-        override suspend fun keepAllSuggested() {
-            rows.value = rows.value.map { if (it.isSuggested) it.copy(status = VocabStatus.KEPT.name) else it }
-        }
-        override suspend fun deleteAllSuggested() { rows.value = rows.value.filterNot { it.isSuggested } }
-    }
 
     private val dao = FakeVocabDao()
     private val saved = mutableListOf<String>()
@@ -55,7 +31,7 @@ class ToolHandlerTest {
         sessionId = { 7L },
         onVocabSaved = { saved += it },
         onLanguageSwitched = { switched += it },
-        onVocabNoted = { noted += it },
+        onVocabNoted = { _, word -> noted += word },
     )
 
     @Test

@@ -177,7 +177,11 @@ fun SessionDetailScreen(sessionId: Long, onBack: () -> Unit) {
                             onClick = {
                                 scope.launch {
                                     val msg = when (val o = capture.mine(sessionId, force = true)) {
-                                        is VocabCapture.Outcome.Found -> "${o.count} new word${if (o.count == 1) "" else "s"} waiting in Vocabulary"
+                                        is VocabCapture.Outcome.Found -> when {
+                                            o.kept == 0 -> "${o.suggested} new word${if (o.suggested == 1) "" else "s"} waiting in Vocabulary"
+                                            o.suggested == 0 -> "${o.kept} new word${if (o.kept == 1) "" else "s"} saved to Vocabulary"
+                                            else -> "${o.kept} saved, ${o.suggested} waiting in Vocabulary"
+                                        }
                                         VocabCapture.Outcome.NothingNew -> "Nothing new to suggest"
                                         VocabCapture.Outcome.TooShort -> "Too short a conversation to mine"
                                         VocabCapture.Outcome.NoApiKey -> "Add a Gemini key in Settings first"

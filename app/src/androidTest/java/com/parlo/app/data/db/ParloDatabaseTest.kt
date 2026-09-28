@@ -166,4 +166,21 @@ class ParloDatabaseMigrationTest {
         }
         db.close()
     }
+
+    @Test
+    fun migrate2To3AddsNullConfidenceToExistingVocab() {
+        helper.createDatabase(dbName, 2).apply {
+            execSQL("INSERT INTO vocab (word, translation, exampleSentence, language, savedAt, source, status, reason) VALUES ('gato', 'cat', '', 'Spanish', 150, 'TUTOR', 'SUGGESTED', 'New word from the tutor')")
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(dbName, 3, true)
+        db.query("SELECT word, status, confidence FROM vocab").use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals("gato", c.getString(0))
+            assertEquals("SUGGESTED", c.getString(1))
+            assertTrue(c.isNull(2))
+        }
+        db.close()
+    }
 }

@@ -189,7 +189,11 @@ private fun SuggestedCard(v: VocabEntity, onKeep: () -> Unit, onDismiss: () -> U
                 Text(v.exampleSentence, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Text(
-                listOf(v.language, v.reason.ifBlank { sourceLabel(v) }).joinToString(" · "),
+                listOfNotNull(
+                    v.language,
+                    v.reason.ifBlank { sourceLabel(v) },
+                    v.confidence?.let { "Jev ${(it * 100).toInt()}%" },
+                ).joinToString(" · "),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.padding(top = 4.dp),

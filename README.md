@@ -30,6 +30,7 @@ Native Kotlin + Jetpack Compose (Material 3), Gemini Live API over WebSockets. S
   - *In-session*: the tutor has a silent `note_vocab` tool it calls whenever you show a gap (ask what a word means, ask how to say something, stall, answer in English, get corrected) or introduces a genuinely useful new word. Nothing is spoken; the word lands in Vocabulary as a **Suggested** entry with the reason ("You asked what it means", "Tutor corrected you", …).
   - *After the session*: the stored transcript is sent once to Gemini `generateContent` (JSON mode) to mine words you didn't know or the tutor introduced, skipping anything already in your list. Sessions with fewer than two learner turns are skipped. Runs in the background after the recap; you can also re-run it from a session's history page (✨).
   - Suggested entries sit in their own tray at the top of Vocabulary — Keep / Skip individually or all at once, with Undo. Kept words join the normal list and flashcards.
+  - *Optional judge (Jev)*: both extractors are generative and over-eager. Add a [TypeSafe AI](https://typesafe.ai) key in Settings and every candidate is run through the **Jev** decision model, which answers three typed questions per word (is it a real target-language word / how useful is a card, on a 3-level scale / why did it come up). The app applies the thresholds: P(top usefulness) ≥ 0.9 → saved straight to your list (marked with the auto-capture icon and a `Jev NN%` tag), score ≥ 0.75 → Suggested, otherwise dropped; "not a real word" or "learner clearly already knows it" drops regardless. In-session `note_vocab` entries appear in Suggested immediately and are re-filed by Jev a moment later. Without a Jev key nothing changes: everything goes to Suggested for you to review.
 - **Session history** with full transcript and spoken end-of-session recap (a snackbar offers **Skip** while the recap is being written)
 - **Automatic model discovery**: lists models advertising `bidiGenerateContent`, prefers the newest native-audio Live model, and lets you override it under Settings → Advanced
 - **Resilience**: session resumption handles, exponential-backoff reconnect, connectivity monitoring, fresh-session fallback with recent-transcript context
@@ -76,10 +77,12 @@ None of the tests need a Gemini API key or network access.
 | `LanguageCatalogTest` | `app/src/test` | Catalog breadth and integrity (every language has accents, unique names), case-insensitive / native-name lookup, search ranking, default config points at a real entry. |
 | `PromptBuilderTest`, `ToolHandlerTest`, `GeminiApiTest` | `app/src/test` | System prompt contents per language/dialect/level/scenario/correction style; `save_vocab` / `note_vocab` / `switch_language` declarations, execution and responses (silent suggestion, dedupe, promotion of a suggestion by an explicit save); error classification. |
 | `VocabMinerTest` | `app/src/test` | Post-session transcript mining against a `MockWebServer` fake of `generateContent`: request shape (JSON mode, schema, transcript, known-word exclusions), model fallback on 404, fenced/malformed output, dedupe and cap, no request when the learner never spoke. |
-| `ParloDatabaseTest`, `ParloDatabaseMigrationTest` | `app/src/androidTest` | Room DAOs on-device: session/turn ordering and cascade delete, recap persistence, empty-session cleanup, vocab grouping, suggestion find/keep/dismiss, `minedAt`; schema auto-migration 1 → 2 keeps existing vocab as kept manual entries. |
+| `JevClientTest`, `VocabJudgeTest` | `app/src/test` | TypeSafe System One client against a `MockWebServer` fake of `POST /v1/systemone`: bearer auth, `state`/`model`/`questions` body, parsing of `choice` / `score` / `noul` answers with probabilities, error mapping (401/429). Judge: the three questions and the transcript excerpt sent as state, and the keep / suggest / drop thresholds on canned answers. |
+| `VocabCaptureTest` | `app/src/test` | Whole pipeline on fake DAOs with one `MockWebServer` playing both Gemini and Jev: mined candidates sorted into kept / suggested / dropped with Jev's reason and confidence persisted; Jev never called without a key (all suggested); a failing Jev call degrades that word to a plain suggestion; in-session notes promoted / relabelled / removed on review, manual entries and already-judged rows skipped. |
+| `ParloDatabaseTest`, `ParloDatabaseMigrationTest` | `app/src/androidTest` | Room DAOs on-device: session/turn ordering and cascade delete, recap persistence, empty-session cleanup, vocab grouping, suggestion find/keep/dismiss, `minedAt`; schema auto-migrations 1 → 2 (existing vocab becomes kept manual entries) and 2 → 3 (`confidence` column, null for unjudged rows). |
 | `MainScreenSmokeTest`, `VocabScreenTest` | `app/src/androidTest` | Launches `MainActivity`, checks the pickers render, drives the language picker (search → accent selection, custom accent entry), that Start without a key opens Settings, and that Vocab / History are reachable. Renders the Vocab screen against the real store and drives the Suggested tray (keep one, dismiss one, keep all). |
 
-What is *not* covered automatically: a real Gemini Live session (audio quality, model behaviour, actual resumption handles). That needs a key and a phone with earbuds; see [First run](#first-run).
+What is *not* covered automatically: a real Gemini Live session (audio quality, model behaviour, actual resumption handles) and real Jev verdicts (how well the thresholds fit its actual calibration). Both need keys and a phone with earbuds; see [First run](#first-run).
 
 ## First run
 
@@ -88,6 +91,7 @@ What is *not* covered automatically: a real Gemini Live session (audio quality, 
 3. Tap **Refresh** under *Model* to discover Live-capable models. The best native-audio model is picked automatically; type a model name to override.
 4. Pick a voice — all 30 Gemini prebuilt voices, grouped Female / Male with their character (e.g. "Sulafat · Warm", "Charon · Informative"). Tap any voice to hear it greet you in your current language and accent (a short Gemini TTS call on your key, cached per voice).
 5. Back on the main screen tap the walk card to choose language, dialect, level, and correction style, then tap **Start Walk Session**.
+6. *Optional:* under **Settings → Advanced → Jev API key** tap **Add key** and paste a key from [typesafe.ai](https://docs.typesafe.ai/introduction/quickstart) to have auto-captured vocab judged before it reaches you. **Remove** switches back to review-everything mode.
 
 Parlo will ask for **microphone**, **notification** (Android 13+), and **Bluetooth** (Android 12+) permissions the first time you start a session.
 
@@ -112,7 +116,8 @@ app/src/main/java/com/parlo/app/
   model/                   SessionConfig, LiveSessionState, enums
   data/                    Room DB (sessions, turns, vocab), Settings (encrypted + DataStore), model discovery
   gemini/                  GeminiApi (URLs/version), Messages (wire types), GeminiLiveClient (WebSocket),
-                           PromptBuilder (system prompt + tools), ToolHandler
+                           PromptBuilder (system prompt + tools), ToolHandler, VocabMiner (post-session extraction)
+  judge/                   JevClient (TypeSafe System One API), VocabJudge (typed questions + thresholds)
   audio/                   MicrophoneStreamer, AudioPlayer, AudioRouteManager, Earcons
   service/                 LiveSessionService (foreground service, MediaSession, reconnect, recap)
   ui/                      Compose screens: main, settings, vocab, history; MainViewModel; theme; nav
@@ -129,4 +134,4 @@ app/src/main/java/com/parlo/app/
 
 ## Privacy
 
-Everything (transcripts, vocab, settings) is stored locally in the app's private storage. Backups are disabled. The only network traffic is to Google's Gemini API using your own key: the Live session itself, model discovery, and one post-session `generateContent` call that sends that session's transcript for vocab mining.
+Everything (transcripts, vocab, settings) is stored locally in the app's private storage. Backups are disabled. The only network traffic is to Google's Gemini API using your own key: the Live session itself, model discovery, and one post-session `generateContent` call that sends that session's transcript for vocab mining. If you add a Jev key, each auto-captured candidate additionally triggers one `POST https://api.typesafe.ai/v1/systemone` carrying the word, its translation/example, and the transcript lines around it (up to 10) — not the full transcript. Both keys live in `EncryptedSharedPreferences`.

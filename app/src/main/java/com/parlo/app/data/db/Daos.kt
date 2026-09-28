@@ -69,6 +69,12 @@ interface VocabDao {
     @Query("SELECT word FROM vocab WHERE language = :language COLLATE NOCASE")
     suspend fun wordsFor(language: String): List<String>
 
+    @Query("SELECT * FROM vocab WHERE id = :id")
+    suspend fun get(id: Long): VocabEntity?
+
+    @Update
+    suspend fun update(vocab: VocabEntity)
+
     @Query("UPDATE vocab SET status = :status WHERE id = :id")
     suspend fun setStatus(id: Long, status: String)
 

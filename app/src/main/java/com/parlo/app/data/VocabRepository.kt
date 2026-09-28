@@ -16,11 +16,12 @@ class VocabRepository(private val dao: VocabDao) {
         example: String,
         language: String,
         sessionId: Long?,
-    ): Long = upsert(word, translation, example, language, sessionId, VocabSource.MANUAL, VocabStatus.KEPT, reason = "")
+    ): Long = upsert(word, translation, example, language, sessionId, VocabSource.MANUAL, VocabStatus.KEPT, reason = "", confidence = null)
 
     /**
      * Silent capture by the tutor or the post-walk miner. Lands in the "Suggested" tray for the
-     * user to keep or dismiss. Returns null when the word is already known (kept or suggested).
+     * user to keep or dismiss — or straight into the kept list when a judge already vouched for
+     * it ([status] = KEPT). Returns null when the word is already known (kept or suggested).
      */
     suspend fun suggest(
         word: String,
@@ -30,11 +31,23 @@ class VocabRepository(private val dao: VocabDao) {
         sessionId: Long?,
         source: VocabSource,
         reason: String,
+        status: VocabStatus = VocabStatus.SUGGESTED,
+        confidence: Double? = null,
     ): Long? {
         val lang = normalizeLanguage(language)
         if (dao.find(lang, word.trim()) != null) return null
-        return upsert(word, translation, example, lang, sessionId, source, VocabStatus.SUGGESTED, reason)
+        return upsert(word, translation, example, lang, sessionId, source, status, reason, confidence)
     }
+
+    suspend fun get(id: Long): VocabEntity? = dao.get(id)
+
+    /** Re-file an existing automatic entry after a judge has looked at it. */
+    suspend fun review(id: Long, status: VocabStatus, reason: String?, confidence: Double) {
+        val v = dao.get(id) ?: return
+        dao.update(v.copy(status = status.name, reason = reason ?: v.reason, confidence = confidence))
+    }
+
+    suspend fun deleteById(id: Long) { dao.get(id)?.let { dao.delete(it) } }
 
     suspend fun knownWords(language: String): List<String> = dao.wordsFor(normalizeLanguage(language))
 
@@ -58,6 +71,7 @@ class VocabRepository(private val dao: VocabDao) {
         source: VocabSource,
         status: VocabStatus,
         reason: String,
+        confidence: Double?,
     ): Long {
         val lang = normalizeLanguage(language)
         val existing = dao.find(lang, word.trim())
@@ -76,6 +90,7 @@ class VocabRepository(private val dao: VocabDao) {
                 source = source.name,
                 status = status.name,
                 reason = reason.trim(),
+                confidence = confidence,
             ),
         )
     }

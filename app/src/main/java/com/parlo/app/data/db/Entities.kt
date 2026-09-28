@@ -55,6 +55,8 @@ data class VocabEntity(
     @ColumnInfo(defaultValue = "KEPT") val status: String = VocabStatus.KEPT.name,
     /** Why the tutor/miner picked it up, e.g. "You asked what it means". */
     @ColumnInfo(defaultValue = "") val reason: String = "",
+    /** Jev's probability that the word is worth a card (null when it was never judged). */
+    @ColumnInfo(defaultValue = "NULL") val confidence: Double? = null,
 ) {
     val isSuggested: Boolean get() = status == VocabStatus.SUGGESTED.name
 }
