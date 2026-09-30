@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://parlo.jonaylor.com/sitemap.xml

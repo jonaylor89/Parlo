@@ -46,9 +46,34 @@ const icons: Record<string, string> = {
 ---
 
 <Base
-  title="Parlo — talk your way through a language, hands-free"
-  description="Parlo is an open-source Android tutor that talks with you in 137 languages and 850+ accents over Gemini Live. Pocket the phone, put in earbuds, go for a walk."
+  title="Parlo — AI language tutor for Android. Hands-free, 137 languages."
+  description="Parlo is a free, open-source Android app that tutors you in 137 languages and 850+ accents via Gemini Live — with the phone in your pocket. No account, no backend, just talk."
 >
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Parlo",
+      "description": "Free, open-source Android voice tutor. 137 languages, 850+ regional accents, powered by Gemini Live. Hands-free, local-first, no account required.",
+      "applicationCategory": "EducationalApplication",
+      "operatingSystem": "Android",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "url": "https://parlo.jonaylor.com",
+      "downloadUrl": "https://github.com/jonaylor89/Parlo#getting-started",
+      "codeRepository": "https://github.com/jonaylor89/Parlo",
+      "creator": { "@type": "Person", "url": "https://github.com/jonaylor89" },
+      "featureList": [
+        "Real-time bidirectional voice conversation",
+        "137 languages with 850+ regional accents",
+        "30 Gemini AI voices",
+        "Automatic vocabulary capture",
+        "Super Beginner mode with English scaffolding",
+        "Hands-free earbud control",
+        "Local-first — no backend, no account, no telemetry",
+        "On-device encrypted API key storage"
+      ]
+    })} />
+  </Fragment>
   <header class="nav">
     <div class="wrap nav-inner">
       <a class="brand" href={`${base}/`}>

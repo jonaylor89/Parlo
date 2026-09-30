@@ -1,7 +1,10 @@
 ---
-interface Props { title: string; description: string }
-const { title, description } = Astro.props;
+interface Props { title: string; description: string; image?: string }
+const { title, description, image } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const siteOrigin = 'https://parlo.jonaylor.com';
+const canonicalUrl = new URL(Astro.url.pathname, siteOrigin).href;
+const ogImage = image ?? `${siteOrigin}/screenshots/walk.png`;
 ---
 <!doctype html>
 <html lang="en">
@@ -10,9 +13,25 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalUrl} />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:site_name" content="Parlo" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    <meta property="og:image" content={`${base}/screenshots/walk.png`} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:alt" content="Parlo — AI voice tutor for Android. 137 languages, 850+ accents, hands-free." />
+
+    <!-- Twitter / X -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+    <meta name="twitter:image:alt" content="Parlo — AI voice tutor for Android. 137 languages, 850+ accents, hands-free." />
+
+    <meta name="theme-color" content="#1e5f74" />
     <link rel="icon" href={`${base}/icon.png`} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -20,6 +39,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
+    <slot name="head" />
   </head>
   <body>
     <slot />
